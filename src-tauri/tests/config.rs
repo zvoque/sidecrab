@@ -17,6 +17,7 @@ fn round_trips() {
         size: "L".into(),
         wander_enabled: true,
         hooks_consent: true,
+        consent_asked: true,
     };
     save_to(&path, &c).unwrap();
     assert_eq!(load_from(&path), c);

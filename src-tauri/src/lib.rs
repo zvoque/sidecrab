@@ -8,6 +8,40 @@ pub mod state_watcher;
 use std::sync::Mutex;
 use tauri::menu::{CheckMenuItemBuilder, MenuBuilder, MenuItemBuilder, SubmenuBuilder};
 use tauri::{AppHandle, Emitter, Manager, WebviewWindow};
+use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
+
+const CONSENT_TEXT: &str = "To react to Claude Code activity, Clawd Pet adds hooks to \
+~/.claude/settings.json.\n\nYour file is backed up to settings.json.bak first, existing \
+hooks are kept untouched, and you can remove ours anytime via right-click → \
+\"Remove Claude Code hooks\".\n\nEnable activity detection?";
+
+/// First-run disclaimer. No settings.json edit happens without an explicit yes;
+/// declining leaves the crab inert (idle only) until enabled from the menu.
+fn maybe_ask_consent(app: &AppHandle) {
+    let cfg = config::load();
+    if cfg.consent_asked
+        || cfg.hooks_consent
+        || hook_installer::hooks_installed(&paths::claude_settings_path())
+    {
+        return;
+    }
+    let handle = app.clone();
+    app.dialog()
+        .message(CONSENT_TEXT)
+        .title("Clawd Pet")
+        .buttons(MessageDialogButtons::OkCancelCustom(
+            "Enable".into(),
+            "Not now".into(),
+        ))
+        .show(move |accepted| {
+            let mut c = config::load();
+            c.consent_asked = true;
+            let _ = config::save(&c);
+            if accepted {
+                let _ = os_actions::hooks_install(handle);
+            }
+        });
+}
 
 /// Opaque region of the sprite as fractions of the window (x0,y0,x1,y1), pushed by
 /// the frontend. Used by the click-through poller — the crab is boxy, so a rect is
@@ -132,6 +166,7 @@ fn spawn_click_through_poller(app: AppHandle) {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .manage(OpaqueRect(Mutex::new((0.0, 0.0, 1.0, 1.0))))
         .manage(DragLock(Mutex::new(false)))
         .invoke_handler(tauri::generate_handler![
@@ -179,6 +214,7 @@ pub fn run() {
             state_watcher::spawn(app.handle().clone());
             spawn_click_through_poller(app.handle().clone());
             idle_monitor::spawn(app.handle().clone());
+            maybe_ask_consent(app.handle());
             Ok(())
         })
         .run(tauri::generate_context!())

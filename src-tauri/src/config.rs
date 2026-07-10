@@ -12,6 +12,8 @@ pub struct Config {
     pub wander_enabled: bool,
     /// User accepted the settings.json hook-install disclaimer.
     pub hooks_consent: bool,
+    /// The first-run disclaimer was shown (regardless of answer) — never nag again.
+    pub consent_asked: bool,
 }
 
 impl Default for Config {
@@ -21,6 +23,7 @@ impl Default for Config {
             size: "M".into(),
             wander_enabled: false,
             hooks_consent: false,
+            consent_asked: false,
         }
     }
 }
