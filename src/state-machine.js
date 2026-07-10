@@ -137,13 +137,15 @@ export class StateMachine {
     }
   }
 
-  /// Petting reaction: quick happy hop, then back to whatever was happening.
+  /// Petting reaction: quick happy hop — seated states bounce at the desk
+  /// instead of flipping face-on — then back to whatever was happening.
   pet() {
     const prev = { state: this.state, tool: this._lastTool };
     this._stopMicro();
     this._sleeping = false;
     this._idleSince = Date.now();
-    this.r.play("celebrate");
+    const seated = this.state === "tool" || this.state === "thinking";
+    this.r.play(seated ? "petWork" : "celebrate");
     clearTimeout(this._decay);
     this._decay = setTimeout(() => this.apply(prev), 700);
   }

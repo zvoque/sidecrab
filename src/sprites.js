@@ -40,6 +40,16 @@ export const SPRITES = {
   think: { loop: true, steps: [{ i: 26, ms: 60000 }] },
   // Hovered while seated: stays at the laptop and squints up at you.
   hoverWork: { loop: true, steps: [{ i: 24, ms: 60000, squint: true }] },
+  // Petted while seated: happy little bounce without leaving the desk.
+  petWork: {
+    loop: true,
+    steps: [
+      { i: 24, ms: 140, dy: -3 },
+      { i: 24, ms: 140 },
+      { i: 24, ms: 120, dy: -2 },
+      { i: 24, ms: 160 },
+    ],
+  },
   // Working (any tool): side profile at his laptop, both claws hammering keys.
   work: { loop: true, steps: [ { i: 24, ms: 130 }, { i: 25, ms: 130 } ] },
   // Panic: full-tilt scramble — used while being carried (drag) and cursor-chasing.
