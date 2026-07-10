@@ -1,69 +1,77 @@
-# Sidecrab
+<div align="center">
 
-**A Claude Code desktop pet** — a tiny always-on-top companion for macOS: a hand-drawn 8-bit pixel crab that floats
-over your screen and reacts to what Claude Code is doing — thinking, running commands,
-editing, awaiting permission, done. Inspired by the Codex pet in the ChatGPT desktop app
-and the crab in [claude-status-bar](https://github.com/m1ckc3s/claude-status-bar).
+# 🦀 Sidecrab
 
-<p align="center"><img src="docs/gifs/hero.gif" width="480" alt="Sidecrab on the desktop"></p>
+**A desktop pet for Claude Code.**
 
-## What he does
+A tiny always-on-top pixel crab that lives on your screen and reacts to what
+Claude is doing. He sits at his laptop while Claude works, waves you down when a
+tool needs permission, wanders off when you step away, and naps when things go
+quiet.
 
-| | | | |
-|:---:|:---:|:---:|:---:|
-| ![idle](docs/gifs/idle.gif) | ![working](docs/gifs/working.gif) | ![thinking](docs/gifs/thinking.gif) | ![permission](docs/gifs/permission.gif) |
-| **idle** | **working** — any tool, at his laptop | **thinking** — pondering | **needs permission** — flags you down |
-
-…plus a bunch more moods and moves he'll show you himself.
-
-Interactions: **drag** him anywhere (he remembers) · **double-click** to focus the app
-running the session · **right-click** for settings. He also reacts to a few other
-things — poke around.
-
-**Wander when idle** (off by default, right-click to enable): when *you* go idle for
-~30s, the crab takes little walks around the screen and scurries home when you're back.
-
-### Hats
-
-![hats](docs/gifs/hats.png)
-
-Right-click → **Hat** — top hat, chef's hat, fedora, or helicopter hat (rotor spins).
-The hat rides along through every animation.
-
-## Requirements
-
-Claude Code (CLI, desktop app, or IDE). Nothing else — no node, no python, no other
-tools. The activity feed comes from a small bundled binary (`sidecrab-hook`).
-
-## Install
+<img src="docs/gifs/hero.gif" width="480" alt="Sidecrab on the desktop">
 
 ```bash
 brew install zvoque/tap/sidecrab
 sidecrab
 ```
 
-That's it — he appears bottom-right and your terminal is free. Right-click him for
-settings, including **Launch at login**.
+</div>
 
-On first run he asks before adding a few hooks to `~/.claude/settings.json` so he can
-tell when Claude is working (your file is backed up; remove them anytime from his menu).
+## What he does
 
-Update later with `brew upgrade sidecrab`.
+| | | | |
+|:---:|:---:|:---:|:---:|
+| ![idle](docs/gifs/idle.gif) | ![working](docs/gifs/working.gif) | ![thinking](docs/gifs/thinking.gif) | ![permission](docs/gifs/permission.gif) |
+| **idle** | **working** | **thinking** | **permission** |
+| resting on your desktop | at his laptop, on any tool | pondering something | flagging you down |
 
-## Trademark & IP disclaimer
+...and a handful of other moods and moves he'll show you himself.
 
-This is an unofficial, open-source side project. It is not affiliated with,
-endorsed by, or sponsored by Anthropic. "Claude", "Clawd", and the Clawd crab
-design are Anthropic's trademarks and intellectual property, referenced here
-nominatively. The walk-cycle sprite frames derive from Anthropic's Clawd
-artwork (by way of
-[claude-status-bar](https://github.com/m1ckc3s/claude-status-bar)'s extraction).
+## Interactions
 
-This project is MIT licensed, but that covers the **source code only** and
-conveys no rights to Anthropic's trademarks, brand, or artwork (see the scope
-note in [LICENSE](LICENSE)). Original replacement art is maintained on the
-`feat/original-art` branch.
+| Do this | He does |
+|---|---|
+| **Drag** him anywhere | moves house (remembers the spot) |
+| **Double-click** | focuses the app running your session |
+| **Right-click** | opens settings |
 
-If this project violates or impedes your trademark or copyright, open an issue
-or reach me on X ([@zvoque](https://x.com/zvoque)) and it will be addressed
-promptly. This is a free side project; it is not monetized.
+**Wander when idle** (off by default): after you've been away ~30 seconds he
+takes little strolls around the screen, then scurries home when you're back.
+
+## Hats
+
+![hats](docs/gifs/hats.png)
+
+Right-click into **Hat** for a top hat, chef's hat, fedora, or helicopter hat.
+Whatever he's wearing rides along through every animation.
+
+## Requirements
+
+Just Claude Code (CLI, desktop app, or IDE). No node, no python, nothing else.
+The activity feed comes from a small bundled binary.
+
+## Setup
+
+On first launch he asks before adding a few hooks to `~/.claude/settings.json`
+so he can tell when Claude is working. Your file is backed up first, and you can
+remove them anytime from his right-click menu.
+
+Everything else lives in that menu: size, position, hats, wander, and **Launch
+at login**. Update with `brew upgrade sidecrab`.
+
+## Trademark & IP
+
+This is an unofficial, open-source side project, not affiliated with, endorsed
+by, or sponsored by Anthropic. "Claude", "Clawd", and the Clawd crab design are
+Anthropic's trademarks and intellectual property, referenced here nominatively.
+The sprite frames derive from Anthropic's Clawd artwork, by way of
+[claude-status-bar](https://github.com/m1ckc3s/claude-status-bar).
+
+The MIT license covers the **source code only** and conveys no rights to
+Anthropic's trademarks, brand, or artwork (see the scope note in
+[LICENSE](LICENSE)).
+
+Violating or impeding your trademark or copyright? Open an issue or reach me on X
+([@zvoque](https://x.com/zvoque)) and it'll be sorted promptly. Free side
+project, not monetized.
