@@ -63,7 +63,7 @@ export class StateMachine {
     // Repeat idle events (hook chatter) must not reset the micro-life timer,
     // cancel an active hover, or wake a sleeping crab.
     if (next === "idle" && this.state === "idle" && (this._micro || this._hovering || this._sleeping)) {
-      if (this._hovering) this.r.play("hover"); // e.g. came home hovered mid-walk-anim
+      if (this._hovering) this.r.play(this._hoverAnim()); // e.g. came home hovered mid-walk
       return;
     }
     clearTimeout(this._decay);
@@ -77,7 +77,7 @@ export class StateMachine {
       this._decay = setTimeout(() => this.apply({ state: "idle" }), DONE_MS);
     }
     if (this._hovering) {
-      this.r.play("hover"); // hover hijacks whatever would play; state tracks underneath
+      this.r.play(this._hoverAnim()); // hover hijacks; pose fits the context
       return;
     }
     if (this._traveling) return; // behavior owns the visuals while walking somewhere
@@ -112,6 +112,12 @@ export class StateMachine {
     this._traveling = !!on;
   }
 
+  /// Hover pose depends on what he's doing: seated (laptop) states squint up at
+  /// you from the desk; otherwise the classic crouch. No more vanishing laptop.
+  _hoverAnim() {
+    return this.state === "tool" || this.state === "thinking" ? "hoverWork" : "hover";
+  }
+
   /// Cursor over the crab: hover hijacks whatever is playing; leaving restores
   /// the animation the current state calls for.
   setHover(on) {
@@ -122,7 +128,7 @@ export class StateMachine {
       this._stopMicro();
       this._sleeping = false; // a looming cursor wakes him
       this._idleSince = Date.now();
-      this.r.play("hover");
+      this.r.play(this._hoverAnim());
     } else if (this._traveling) {
       // walkTo reclaims the walk animation on its next tick
     } else {

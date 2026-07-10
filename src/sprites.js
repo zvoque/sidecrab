@@ -35,9 +35,13 @@ export const SPRITES = {
     loop: true,
     steps: Array.from({ length: 15 }, (_, k) => ({ i: k + 5, ms: 70 })),
   },
-  // Thinking: parked at the laptop, mostly still, occasional idle tap — the whole
-  // session (thinking ↔ tools) stays seated instead of shuffling around.
-  think: { loop: true, steps: [ { i: 24, ms: 1300 }, { i: 25, ms: 180 } ] },
+  // Thinking: seated at the laptop, gazing up, thought bubble percolating.
+  think: {
+    loop: true,
+    steps: [ { i: 26, ms: 900, thought: 0 }, { i: 26, ms: 900, thought: 1 } ],
+  },
+  // Hovered while seated: stays at the laptop and squints up at you.
+  hoverWork: { loop: true, steps: [{ i: 24, ms: 60000, squint: true }] },
   // Working (any tool): side profile at his laptop, claw tapping, screen flicker.
   work: { loop: true, steps: [ { i: 24, ms: 260 }, { i: 25, ms: 260 } ] },
   // Panic: full-tilt scramble — used while being carried (drag) and cursor-chasing.
@@ -47,10 +51,11 @@ export const SPRITES = {
   },
   // Mad glare: narrowed eyes, dead still (pre/post cursor-chase).
   glare: { loop: true, steps: [{ i: 0, ms: 60000, squint: true }] },
-  // Cursor chase: full-tilt scramble, eyes narrowed, "!" over his head.
+  // Cursor chase: full-tilt scramble, eyes HALF closed (not the dash-slit), "!"
+  // over his head.
   chase: {
     loop: true,
-    steps: Array.from({ length: 15 }, (_, k) => ({ i: k + 5, ms: 45, squint: true, bubble: true })),
+    steps: Array.from({ length: 15 }, (_, k) => ({ i: k + 5, ms: 45, halfEyes: true, bubble: true })),
   },
   // Hovered: crouch down (legs sink into the ground) and squint contentedly.
   hover: { loop: true, steps: [{ i: 0, ms: 60000, dy: 3, squint: true }] },
@@ -248,6 +253,7 @@ export class SpriteRenderer {
     };
     const mask = [];
     const bottoms = new Map(); // x -> lowest eye y in that column
+    const spans = new Map(); // x -> [minY, maxY]
     for (let y = 0; y < FRAME_H; y++) {
       for (let x = 0; x < FRAME_W; x++) {
         if (!isDark(x, y)) continue;
@@ -257,11 +263,14 @@ export class SpriteRenderer {
         const s = (Math.min(sy, FRAME_H - 1) * FRAME_W + x) * 4;
         mask.push({ x, y, fill: `rgb(${d[s]},${d[s + 1]},${d[s + 2]})` });
         if ((bottoms.get(x) ?? -1) < y) bottoms.set(x, y);
+        const sp = spans.get(x);
+        spans.set(x, sp ? [Math.min(sp[0], y), Math.max(sp[1], y)] : [y, y]);
       }
     }
     return (this._eyes[i] = {
       mask,
       bottoms: new Set([...bottoms].map(([x, y]) => `${x},${y}`)),
+      spans, // per-column [minY, maxY] — halfEyes keeps the lower half open
     });
   }
 
@@ -310,12 +319,16 @@ export class SpriteRenderer {
     }
     const y = CRAB_Y + (s.dy || 0);
     ctx.drawImage(img, 0, y);
-    if (s.blink || s.squint) {
+    if (s.blink || s.squint || s.halfEyes) {
       const eyes = this._eyeData(s.i);
       for (const p of eyes?.mask || []) {
-        // Squint keeps only the lowest eye pixel per column (flat closed line,
-        // no leftover outline above); blink closes everything.
+        // blink: close fully. squint: keep only the lowest pixel per column
+        // (dash-slit). halfEyes: keep the lower half of each column open.
         if (s.squint && !s.blink && eyes.bottoms.has(`${p.x},${p.y}`)) continue;
+        if (s.halfEyes && !s.blink && !s.squint) {
+          const sp = eyes.spans.get(p.x);
+          if (sp && p.y > (sp[0] + sp[1]) / 2) continue; // lower half stays open
+        }
         ctx.fillStyle = p.fill;
         ctx.fillRect(p.x, p.y + y, 1, 1);
       }
@@ -352,6 +365,7 @@ export class SpriteRenderer {
     }
     ctx.restore();
     if (s.zzz !== undefined) this._drawZzz(s.zzz);
+    if (s.thought !== undefined) this._drawThought(s.i, s.thought, y);
     if (s.bubble) {
       // "!" floating above his head (unflipped so it always reads; mirror the
       // anchor when the crab is flipped).
@@ -366,6 +380,22 @@ export class SpriteRenderer {
         ctx.fillRect(bx, Math.max(0, top - 3), 3, 2);
       }
     }
+  }
+
+  /// Thought bubble above the head: trailing dots up to a little cloud, with a
+  /// subtle two-phase drift while he ponders.
+  _drawThought(i, phase, y) {
+    const a = this._headAnchor(i);
+    if (!a) return;
+    const ctx = this.ctx;
+    const cx = Math.round(this.facing === -1 ? CANVAS_W - a.cx : a.cx);
+    const top = y + a.top;
+    const d = phase ? 1 : 0;
+    ctx.fillStyle = BUBBLE;
+    ctx.fillRect(cx + 2, top - 3 - d, 1, 1);            // tiny dot
+    ctx.fillRect(cx + 4, top - 6 - d, 2, 2);            // middle dot
+    ctx.fillRect(cx + 7, top - 12 - d, 6, 4);           // cloud
+    ctx.fillRect(cx + 8, top - 13 - d, 4, 6);           // cloud rounding
   }
 
   /// Sleep Z's drifting up-right of the head; `phase` alternates the drift.

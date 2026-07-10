@@ -1,5 +1,5 @@
 // Clawd frames: 0-19 official walk cycle (extracted via CSB, quantized flat),
-// 20-21 wave, 22-23 stretch, 24-25 side-profile laptop typing (authored).
+// 20-21 wave, 22-23 stretch, 24-25 laptop typing, 26 laptop pondering.
 // Frames 0-19 derive from Anthropic IP — personal use only. See README.
 export const FRAME_W = 51;
 export const FRAME_H = 36;
@@ -30,4 +30,5 @@ export const WALK_PNGS = [
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADMAAAAkCAYAAAAkcgIJAAAAd0lEQVR4nO3SwQnAMAxD0WzZUTprp2l6Dbkobqhs+gU+BYSfSWtCrvO4M8zyopUw0zsYMAZM5QlhnqMMs+nqrzvTfqnQ8mCSzL8wmYGh5cGAAQMGDBgwYMDUway+f9UpBYyhUwoYQ6cUMIZOKWAMnVLAGDqlVMF0ex9vMqMOdcYAAAAASUVORK5CYII=",
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADMAAAAkCAYAAAAkcgIJAAAAfUlEQVR4nO3Uuw2AMAwA0QyFKJkCCQZgB2bNNIEypMD5G4U7yUXkxq+JMUREFJE9N1d7wID5C+Z+PgZMCWaaF+fPMJh1P8B85gMAAwYMmGhMi+PB5GB6HK+G6YGthkkZMC0xfkNhSno7KHenFhhhpxYYYacWGGGnFhhhF3YBEpNwr3GI2DYAAAAASUVORK5CYII=",
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADMAAAAkCAYAAAAkcgIJAAAAgUlEQVR4nO3UsQ2AMAwAwQyFKJkCCQZgBzZhCCZhBaYJlJACQ4IxSv4lF5EbXxPniIjoRuvY+bcHDJhSMPvzNGBSMFXd+ONkg5nmBcxvPgAwYMCAKROjcTyYGMwXx6tg2n54NFpYMGFZYVK6Oih2ZxYYYWcWGGFnFhhhZxYYYRe2AYqLcL+MzcUnAAAAAElFTkSuQmCC",
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADMAAAAkCAYAAAAkcgIJAAAAfUlEQVR4nO3UwQ2AIAxAUYYiHp2CRAdwB2d1GtRb9WBBaGrM/0kvNCS8CyEQEVFB2zrl3gPGAnMcXQYMmL9h4jBmOa0Y1w9AQtK8gAEDBgwYMGB6YSweD6YEUzNgLDGyWsx557OYlp4e9HbnFhhl5xYYZecWGGXnFhhld28Hzh1WM5wM1QcAAAAASUVORK5CYII=",
 ];
