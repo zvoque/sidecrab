@@ -35,8 +35,9 @@ export const SPRITES = {
     loop: true,
     steps: Array.from({ length: 15 }, (_, k) => ({ i: k + 5, ms: 70 })),
   },
-  // Thinking: slow pensive shuffle.
-  think: { loop: true, steps: [ { i: 4, ms: 500 }, { i: 5, ms: 500 }, { i: 4, ms: 500 }, { i: 0, ms: 700 } ] },
+  // Thinking: parked at the laptop, mostly still, occasional idle tap — the whole
+  // session (thinking ↔ tools) stays seated instead of shuffling around.
+  think: { loop: true, steps: [ { i: 24, ms: 1300 }, { i: 25, ms: 180 } ] },
   // Working (any tool): side profile at his laptop, claw tapping, screen flicker.
   work: { loop: true, steps: [ { i: 24, ms: 260 }, { i: 25, ms: 260 } ] },
   // Panic: full-tilt scramble — used while being carried (drag) and cursor-chasing.
@@ -46,14 +47,19 @@ export const SPRITES = {
   },
   // Mad glare: narrowed eyes, dead still (pre/post cursor-chase).
   glare: { loop: true, steps: [{ i: 0, ms: 60000, squint: true }] },
+  // Cursor chase: full-tilt scramble, eyes narrowed, "!" over his head.
+  chase: {
+    loop: true,
+    steps: Array.from({ length: 15 }, (_, k) => ({ i: k + 5, ms: 45, squint: true, bubble: true })),
+  },
   // Hovered: crouch down (legs sink into the ground) and squint contentedly.
   hover: { loop: true, steps: [{ i: 0, ms: 60000, dy: 3, squint: true }] },
-  // Asleep: eyes shut, gentle Z's drifting up (long-idle state).
+  // Asleep: dash eyes (same as the hover squint), gentle Z's drifting up.
   sleep: {
     loop: true,
     steps: [
-      { i: 0, ms: 900, blink: true, dy: 2, zzz: 0 },
-      { i: 0, ms: 900, blink: true, dy: 2, zzz: 1 },
+      { i: 0, ms: 900, squint: true, dy: 2, zzz: 0 },
+      { i: 0, ms: 900, squint: true, dy: 2, zzz: 1 },
     ],
   },
   // Glance around: the pupils actually move (micro-idle).
@@ -153,7 +159,6 @@ export class SpriteRenderer {
       img.src = src;
       return img;
     });
-    this._eyeMask = null; // computed lazily once frame 0 loads
     this._boundsCache = {};
   }
 
@@ -223,12 +228,13 @@ export class SpriteRenderer {
     this._raf = requestAnimationFrame(this._loop);
   }
 
-  /// Dark opaque pixels of frame 0 = the eyes, including the darker halo around
-  /// them (anti-aliasing from the source GIF) — missing the halo leaves an
-  /// "eyelid" outline when the core is filled. Each pixel remembers the first
-  /// clean body color below it so blink/squint can close the eye seamlessly.
-  _computeEyeMask() {
-    const img = this.images[0];
+  /// Eye data for a frame, cached: dark opaque pixels (incl. any halo) with the
+  /// body color below each, plus per-column lowest pixels (squint keeps those).
+  /// Per-frame because eyes move with the walk wobble.
+  _eyeData(i) {
+    this._eyes ??= {};
+    if (this._eyes[i]) return this._eyes[i];
+    const img = this.images[i];
     if (!img.complete || img.naturalWidth === 0) return null;
     const off = new OffscreenCanvas(FRAME_W, FRAME_H);
     const ctx = off.getContext("2d");
@@ -253,8 +259,10 @@ export class SpriteRenderer {
         if ((bottoms.get(x) ?? -1) < y) bottoms.set(x, y);
       }
     }
-    this._eyeBottoms = new Set([...bottoms].map(([x, y]) => `${x},${y}`));
-    return mask;
+    return (this._eyes[i] = {
+      mask,
+      bottoms: new Set([...bottoms].map(([x, y]) => `${x},${y}`)),
+    });
   }
 
   _loop(now) {
@@ -303,24 +311,24 @@ export class SpriteRenderer {
     const y = CRAB_Y + (s.dy || 0);
     ctx.drawImage(img, 0, y);
     if (s.blink || s.squint) {
-      if (!this._eyeMask) this._eyeMask = this._computeEyeMask();
-      for (const p of this._eyeMask || []) {
+      const eyes = this._eyeData(s.i);
+      for (const p of eyes?.mask || []) {
         // Squint keeps only the lowest eye pixel per column (flat closed line,
         // no leftover outline above); blink closes everything.
-        if (s.squint && !s.blink && this._eyeBottoms?.has(`${p.x},${p.y}`)) continue;
+        if (s.squint && !s.blink && eyes.bottoms.has(`${p.x},${p.y}`)) continue;
         ctx.fillStyle = p.fill;
         ctx.fillRect(p.x, p.y + y, 1, 1);
       }
     }
     if (s.eyesDx) {
       // Glance: erase the pupils, redraw them shifted (real eye movement).
-      if (!this._eyeMask) this._eyeMask = this._computeEyeMask();
-      for (const p of this._eyeMask || []) {
+      const eyes = this._eyeData(s.i);
+      for (const p of eyes?.mask || []) {
         ctx.fillStyle = p.fill;
         ctx.fillRect(p.x, p.y + y, 1, 1);
       }
       ctx.fillStyle = "#000";
-      for (const p of this._eyeMask || []) {
+      for (const p of eyes?.mask || []) {
         ctx.fillRect(p.x + s.eyesDx, p.y + y, 1, 1);
       }
     }
@@ -345,10 +353,18 @@ export class SpriteRenderer {
     ctx.restore();
     if (s.zzz !== undefined) this._drawZzz(s.zzz);
     if (s.bubble) {
-      // "!" above the crab, upper-right; drawn unflipped so it always reads.
-      ctx.fillStyle = BUBBLE;
-      ctx.fillRect(CANVAS_W - 12, 0, 3, 7);
-      ctx.fillRect(CANVAS_W - 12, 9, 3, 3);
+      // "!" floating above his head (unflipped so it always reads; mirror the
+      // anchor when the crab is flipped).
+      const a = this._headAnchor(s.i);
+      if (a) {
+        const cx = this.facing === -1 ? CANVAS_W - a.cx : a.cx;
+        const hatH = this.hat ? HATS[this.hat === "heli" ? "heli0" : this.hat].length - 1 : 0;
+        const top = y + a.top - hatH; // clear the hat if he's wearing one
+        const bx = Math.round(cx) - 1;
+        ctx.fillStyle = BUBBLE;
+        ctx.fillRect(bx, Math.max(0, top - 11), 3, 6);
+        ctx.fillRect(bx, Math.max(0, top - 3), 3, 2);
+      }
     }
   }
 

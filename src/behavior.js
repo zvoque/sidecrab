@@ -77,7 +77,7 @@ export function attachBehavior({ renderer, sm }) {
     let x = g?.winX ?? 0;
     let y = g?.winY ?? 0;
     const [w, hgt] = [g?.winW ?? 300, g?.winH ?? 280];
-    renderer.play("panic");
+    renderer.play("chase"); // narrowed eyes + "!" — distinct from carried-panic
     const until = Date.now() + 4000;
     while (Date.now() < until) {
       const cur = await call("cursor_pos");
