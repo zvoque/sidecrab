@@ -111,8 +111,10 @@ export class SpriteRenderer {
     this._raf = requestAnimationFrame(this._loop);
   }
 
-  /// Dark opaque pixels of frame 0 = the eyes; remember each with the body color
-  /// sampled below it so blink can "close" them.
+  /// Dark opaque pixels of frame 0 = the eyes, including the darker halo around
+  /// them (anti-aliasing from the source GIF) — missing the halo leaves an
+  /// "eyelid" outline when the core is filled. Each pixel remembers the first
+  /// clean body color below it so blink/squint can close the eye seamlessly.
   _computeEyeMask() {
     const img = this.images[0];
     if (!img.complete || img.naturalWidth === 0) return null;
@@ -120,24 +122,27 @@ export class SpriteRenderer {
     const ctx = off.getContext("2d");
     ctx.drawImage(img, 0, 0);
     const d = ctx.getImageData(0, 0, FRAME_W, FRAME_H).data;
+    const isDark = (x, y) => {
+      if (x < 0 || y < 0 || x >= FRAME_W || y >= FRAME_H) return false;
+      const o = (y * FRAME_W + x) * 4;
+      if (d[o + 3] < 150) return false;
+      return 0.299 * d[o] + 0.587 * d[o + 1] + 0.114 * d[o + 2] <= 120;
+    };
     const mask = [];
+    const bottoms = new Map(); // x -> lowest eye y in that column
     for (let y = 0; y < FRAME_H; y++) {
       for (let x = 0; x < FRAME_W; x++) {
-        const o = (y * FRAME_W + x) * 4;
-        if (d[o + 3] < 200) continue;
-        const lum = 0.299 * d[o] + 0.587 * d[o + 1] + 0.114 * d[o + 2];
-        if (lum > 60) continue; // not an eye pixel
-        // body color from 4px below (safely inside the shell)
-        const s = ((y + 4) * FRAME_W + x) * 4;
+        if (!isDark(x, y)) continue;
+        // first clean body pixel below (skip the rest of the eye/halo)
+        let sy = y + 1;
+        while (sy < FRAME_H && isDark(x, sy)) sy++;
+        const s = (Math.min(sy, FRAME_H - 1) * FRAME_W + x) * 4;
         mask.push({ x, y, fill: `rgb(${d[s]},${d[s + 1]},${d[s + 2]})` });
+        if ((bottoms.get(x) ?? -1) < y) bottoms.set(x, y);
       }
     }
+    this._eyeBottoms = new Set([...bottoms].map(([x, y]) => `${x},${y}`));
     return mask;
-  }
-
-  _eyeHasBelow(p) {
-    if (!this._eyeSet) this._eyeSet = new Set((this._eyeMask || []).map((q) => `${q.x},${q.y}`));
-    return this._eyeSet.has(`${p.x},${p.y + 1}`);
   }
 
   _loop(now) {
@@ -180,9 +185,9 @@ export class SpriteRenderer {
     if (s.blink || s.squint) {
       if (!this._eyeMask) this._eyeMask = this._computeEyeMask();
       for (const p of this._eyeMask || []) {
-        // Squint closes only the upper half of each eye (pixels that have another
-        // eye pixel directly beneath them); blink closes everything.
-        if (s.squint && !s.blink && !this._eyeHasBelow(p)) continue;
+        // Squint keeps only the lowest eye pixel per column (flat closed line,
+        // no leftover outline above); blink closes everything.
+        if (s.squint && !s.blink && this._eyeBottoms?.has(`${p.x},${p.y}`)) continue;
         ctx.fillStyle = p.fill;
         ctx.fillRect(p.x, p.y + y, 1, 1);
       }

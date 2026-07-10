@@ -55,7 +55,15 @@ export class StateMachine {
     this._stopMicro();
     this.state = next;
     this._lastTool = tool;
-    switch (this.state) {
+    // done still decays to idle even while hover has hijacked the visuals.
+    if (next === "done") {
+      this._decay = setTimeout(() => this.apply({ state: "idle" }), DONE_MS);
+    }
+    if (this._hovering) {
+      this.r.play("hover"); // hover hijacks whatever would play; state tracks underneath
+      return;
+    }
+    switch (next) {
       case "thinking":
         this.r.play("think");
         break;
@@ -68,15 +76,10 @@ export class StateMachine {
         break;
       case "done":
         this.r.play("celebrate");
-        this._decay = setTimeout(() => this.apply({ state: "idle" }), DONE_MS);
         break;
       default:
-        if (this._hovering) {
-          this.r.play("hover"); // work ended under the cursor — settle into the crouch
-        } else {
-          this.r.play("rest");
-          this._scheduleMicro();
-        }
+        this.r.play("rest");
+        this._scheduleMicro();
     }
   }
 
@@ -84,17 +87,17 @@ export class StateMachine {
     return this.state;
   }
 
-  /// Cursor over the crab: crouch + squint while idle. Busy states outrank it,
-  /// and leaving hover restores normal idle life.
+  /// Cursor over the crab: hover hijacks whatever is playing; leaving restores
+  /// the animation the current state calls for.
   setHover(on) {
-    this._hovering = !!on;
-    if (this.state !== "idle") return;
+    on = !!on;
+    if (on === this._hovering) return;
+    this._hovering = on;
     if (on) {
       this._stopMicro();
       this.r.play("hover");
     } else {
-      this.r.play("rest");
-      this._scheduleMicro();
+      this.apply({ state: this.state, tool: this._lastTool });
     }
   }
 
