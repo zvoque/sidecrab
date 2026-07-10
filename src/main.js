@@ -19,6 +19,9 @@ window.addEventListener("DOMContentLoaded", async () => {
     attachInput({ renderer, sm, getHost: () => host });
     const behavior = attachBehavior({ renderer, sm });
     const { listen } = window.__TAURI__.event;
+    const { invoke } = window.__TAURI__.core;
+    invoke("get_config").then((c) => c && renderer.setHat(c.hat));
+    await listen("hat-changed", (e) => renderer.setHat(e.payload));
     await listen("claude-state", (e) => {
       if (e.payload?.host) host = e.payload.host;
       behavior.onClaudeState(e.payload); // wander preemption before the anim swap

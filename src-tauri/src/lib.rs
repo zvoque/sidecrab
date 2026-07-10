@@ -89,6 +89,17 @@ fn build_settings_menu(app: &AppHandle) -> Option<tauri::menu::Submenu<tauri::Wr
         .build()
         .ok()?;
 
+    let hat = SubmenuBuilder::new(app, "Hat")
+        .items(&[
+            &CheckMenuItemBuilder::with_id("hat-none", "None").checked(cfg.hat == "none").build(app).ok()?,
+            &CheckMenuItemBuilder::with_id("hat-top", "Top Hat").checked(cfg.hat == "top").build(app).ok()?,
+            &CheckMenuItemBuilder::with_id("hat-chef", "Chef's Hat").checked(cfg.hat == "chef").build(app).ok()?,
+            &CheckMenuItemBuilder::with_id("hat-fedora", "Fedora").checked(cfg.hat == "fedora").build(app).ok()?,
+            &CheckMenuItemBuilder::with_id("hat-heli", "Helicopter Hat").checked(cfg.hat == "heli").build(app).ok()?,
+        ])
+        .build()
+        .ok()?;
+
     let wander = CheckMenuItemBuilder::with_id("wander", "Wander when idle")
         .checked(cfg.wander_enabled)
         .build(app)
@@ -103,6 +114,7 @@ fn build_settings_menu(app: &AppHandle) -> Option<tauri::menu::Submenu<tauri::Wr
     SubmenuBuilder::new(app, "Clawd Pet")
         .item(&size)
         .item(&position)
+        .item(&hat)
         .item(&wander)
         .separator()
         .item(&hooks)
@@ -126,9 +138,18 @@ pub(crate) fn refresh_app_menu(app: &AppHandle) {
 
 #[tauri::command]
 fn show_menu(window: WebviewWindow) {
-    if let Some(menu) = build_settings_menu(window.app_handle()) {
-        let _ = window.popup_menu(&menu);
-    }
+    let Some(menu) = build_settings_menu(window.app_handle()) else { return };
+    // Anchor high enough that the menu never opens past the screen bottom
+    // (macOS renders a clipped, scroll-to-reveal menu otherwise).
+    const MENU_H: f64 = 280.0; // generous logical estimate
+    let y = match (window.current_monitor(), window.outer_position(), window.scale_factor()) {
+        (Ok(Some(mon)), Ok(pos), Ok(scale)) => {
+            let below = (mon.position().y + mon.size().height as i32 - pos.y) as f64 / scale;
+            (below - MENU_H).min(0.0)
+        }
+        _ => -150.0,
+    };
+    let _ = window.popup_menu_at(&menu, tauri::Position::Logical(tauri::LogicalPosition::new(0.0, y)));
 }
 
 fn on_menu(app: &AppHandle, id: &str) {
@@ -154,6 +175,13 @@ fn on_menu(app: &AppHandle, id: &str) {
             let enabled = !config::load().wander_enabled;
             os_actions::set_wander(enabled);
             let _ = app.emit("wander-changed", enabled);
+        }
+        id if id.starts_with("hat-") => {
+            let hat = id.trim_start_matches("hat-").to_string();
+            let mut c = config::load();
+            c.hat = hat.clone();
+            let _ = config::save(&c);
+            let _ = app.emit("hat-changed", hat);
         }
         // Menu action = explicit user intent = consent.
         "hooks-install" => {

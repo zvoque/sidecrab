@@ -86,6 +86,53 @@ export const SPRITES = {
 
 const BUBBLE = "#f2e7dc";
 
+// ── Hats ─────────────────────────────────────────────────────────────────────
+// Char-map pixel art, glued to the detected head-top of whatever frame is
+// showing — no frame remakes needed. Chars map to HAT_COLORS.
+const HAT_COLORS = {
+  k: "#1d1c22", // black
+  b: "#7a4a28", // hat band brown
+  w: "#f2efe9", // chef white
+  d: "#d8d3c8", // chef shade
+  r: "#c8372d", // heli cap red
+  y: "#e8b83a", // heli cap accent
+  g: "#5a5f6a", // rotor gray
+};
+const HATS = {
+  top: [
+    "...kkkkkkkk...",
+    "...kkkkkkkk...",
+    "...kkkkkkkk...",
+    "...bbbbbbbb...",
+    "kkkkkkkkkkkkkk",
+  ],
+  chef: [
+    ".wwwwwwwwwww.",
+    "wwwwwwwwwwwww",
+    "wwwwwwwwwwwww",
+    ".ddddddddddd.",
+  ],
+  fedora: [
+    "....kkkkkkkk....",
+    "....kkkkkkkk....",
+    "....bbbbbbbb....",
+    "kkkkkkkkkkkkkkkk",
+  ],
+  // Helicopter hat: two rotor phases, alternated by the renderer.
+  heli0: [
+    "gggggggggggggg",
+    "......kk......",
+    "...rrryyrrr...",
+    "...rrrrrrrr...",
+  ],
+  heli1: [
+    ".....gggg.....",
+    "......kk......",
+    "...rrryyrrr...",
+    "...rrrrrrrr...",
+  ],
+};
+
 export class SpriteRenderer {
   constructor(canvas) {
     this.canvas = canvas;
@@ -122,6 +169,36 @@ export class SpriteRenderer {
 
   setFacing(dir) {
     this.facing = dir === "left" ? -1 : 1;
+  }
+
+  setHat(name) {
+    this.hat = HATS[name] || HATS[name + "0"] ? name : null;
+    if (name === "none") this.hat = null;
+  }
+
+  /// Head anchor for a frame: topmost row containing a horizontal opaque run
+  /// ≥12px (the head is wide; raised claws/arms are narrow and get skipped).
+  /// Returns {cx, top} in frame coords, cached per frame index.
+  _headAnchor(i) {
+    this._anchors ??= {};
+    if (this._anchors[i]) return this._anchors[i];
+    const img = this.images[i];
+    if (!img.complete || img.naturalWidth === 0) return null;
+    const off = new OffscreenCanvas(FRAME_W, FRAME_H);
+    const ctx = off.getContext("2d");
+    ctx.drawImage(img, 0, 0);
+    const d = ctx.getImageData(0, 0, FRAME_W, FRAME_H).data;
+    for (let y = 0; y < FRAME_H; y++) {
+      let run = 0, best = 0, end = 0;
+      for (let x = 0; x < FRAME_W; x++) {
+        run = d[(y * FRAME_W + x) * 4 + 3] > 128 ? run + 1 : 0;
+        if (run > best) { best = run; end = x; }
+      }
+      if (best >= 12) {
+        return (this._anchors[i] = { cx: end - best / 2 + 0.5, top: y });
+      }
+    }
+    return null;
   }
 
   /// Match the backing store to physical pixels (window size × devicePixelRatio)
@@ -237,6 +314,24 @@ export class SpriteRenderer {
       ctx.fillStyle = "#000";
       for (const p of this._eyeMask || []) {
         ctx.fillRect(p.x + s.eyesDx, p.y + y, 1, 1);
+      }
+    }
+    if (this.hat) {
+      // Hat rides the head in every animation (drawn inside the flip transform).
+      const a = this._headAnchor(s.i);
+      if (a) {
+        const name = this.hat === "heli" ? `heli${Math.floor(this._t / 130) % 2}` : this.hat;
+        const rows = HATS[name];
+        const hy = y + a.top - rows.length + 1; // 1px overlap onto the head
+        const hx = Math.round(a.cx - rows[0].length / 2);
+        for (let r = 0; r < rows.length; r++) {
+          for (let c = 0; c < rows[r].length; c++) {
+            const col = HAT_COLORS[rows[r][c]];
+            if (!col) continue;
+            ctx.fillStyle = col;
+            ctx.fillRect(hx + c, hy + r, 1, 1);
+          }
+        }
       }
     }
     ctx.restore();

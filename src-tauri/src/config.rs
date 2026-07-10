@@ -14,6 +14,8 @@ pub struct Config {
     pub hooks_consent: bool,
     /// The first-run disclaimer was shown (regardless of answer) — never nag again.
     pub consent_asked: bool,
+    /// Cosmetic hat: "none" | "top" | "chef" | "fedora" | "heli".
+    pub hat: String,
 }
 
 impl Default for Config {
@@ -24,6 +26,7 @@ impl Default for Config {
             wander_enabled: false,
             hooks_consent: false,
             consent_asked: false,
+            hat: "none".into(),
         }
     }
 }
