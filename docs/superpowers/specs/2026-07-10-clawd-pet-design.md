@@ -121,11 +121,22 @@ atomically writes `<app-config>/clawd-pet/state.json`:
 | `SessionStart` | — | create `sessions.d/<sid>`, record `host` from `TERM_PROGRAM` (or "Claude" if a desktop session) |
 | `SessionEnd` | — | remove `sessions.d/<sid>` |
 
-- **Hook install:** `hook_installer` adds these entries to `~/.claude/settings.json` on first
-  run — additive and idempotent (keyed on our binary path), preserving any existing hooks
-  (CSB included; both can run side by side). A menu item / uninstall removes them cleanly.
+- **First-run consent (disclaimer):** before any edit, the pet shows a one-time dialog:
+  *"Clawd Pet needs to add hooks to `~/.claude/settings.json` so it can tell when Claude Code
+  is working. Your file is backed up to `settings.json.bak` first, existing hooks are kept,
+  and you can remove ours anytime from the right-click menu."* → **Enable / Not now.** No edit
+  happens without consent; declining runs the app inert (idle crab) until enabled from the menu.
+- **Hook install:** on consent, `hook_installer` writes a backup (`settings.json.bak`) then
+  adds our entries — additive and idempotent (keyed on our binary path), preserving any
+  existing hooks (CSB included; both run side by side). Menu item **"Remove hooks"** reverses
+  it (restores/strips only ours), mirroring CSB's `uninstall.js`.
 - **Standalone runtime:** the hook is a compiled binary — no node/python, no version-pinned
   paths (the failure mode that currently breaks CSB's hook on this machine).
+- **Stale-state clearing (stolen from CSB `lifecycle.js`):** force-quit fires `SessionEnd`
+  with no `Stop`, freezing an animation. On `SessionStart`/`SessionEnd`, if the current
+  `state` belongs to *this* `sessionId` and is `thinking`/`tool`/`permission`, reset to
+  `idle`. The `sessionId` gate is load-bearing — warmup churn from another session must not
+  wipe a live turn.
 - `sessions.d/` = one file per live session (count reserved for a later badge).
 - `tool` picks the working-animation variant (§5); `host` powers double-click activation (§6);
   `transcript` powers double-click reveal.
@@ -177,7 +188,8 @@ Interactions:
   drag region gated to opaque pixels). Absolute screen position persisted on drop.
 - **Click (single)** — "pet": play a quick wiggle/bounce reaction, then resume prior state.
 - **Right-click** — native context menu: `Size ▸ S / M / L`, `Wander when idle ✓`,
-  `Quit`. (Room to add `Open current session` later.)
+  `Activity detection ▸ Enable hooks… / Remove hooks`, `Quit`. (Room to add `Open current
+  session` later.)
 - **Double-click** — `activate_host`: bring the session's host app to the front. If the
   session is a Claude Desktop session (`host = "Claude"`), activate `Claude.app`; otherwise
   activate the terminal recorded in `host` (`iTerm.app`, `Terminal.app`, VS Code, …) via
@@ -266,6 +278,9 @@ distributed, keep the name and art "inspired-by," not a copy, and avoid the Claw
 
 ## 12. Verification plan
 
+- **First-run consent:** confirm no `settings.json` edit occurs before the user clicks
+  Enable; declining leaves the file untouched and the crab inert; a backup `settings.json.bak`
+  is written on the first accepted edit.
 - **Hook install:** run first-launch install against a temp `settings.json` (empty, and one
   already containing CSB hooks); confirm our entries are added once, existing hooks preserved,
   and re-running is a no-op; confirm removal deletes only ours.
@@ -289,8 +304,8 @@ distributed, keep the name and art "inspired-by," not a copy, and avoid the Claw
 
 - **Only Claude Code** (any surface that reads `~/.claude/settings.json` and fires hooks:
   CLI, desktop app, IDE). No CSB, no node, no python — the hook handler is a bundled binary.
-- Writes to `~/.claude/settings.json` (additive/idempotent/removable) and to
-  `<app-config>/clawd-pet/`.
+- Writes to `~/.claude/settings.json` only after first-run consent (backup + additive +
+  idempotent + removable), and to `<app-config>/clawd-pet/`.
 - Build toolchain: `cargo` present; `tauri-cli` not yet installed locally
   (`cargo install tauri-cli` or `npm create tauri-app`). `node`/`npm` present but only for the
   Tauri dev tooling, not at runtime.
