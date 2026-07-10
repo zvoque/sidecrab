@@ -114,9 +114,12 @@ export class StateMachine {
   }
 
   /// Hover pose depends on what he's doing: seated (laptop) states squint up at
-  /// you from the desk; otherwise the classic crouch. No more vanishing laptop.
+  /// you from the desk — on the frame matching their arm pose — otherwise the
+  /// classic crouch. No more vanishing laptop or jumping arms.
   _hoverAnim() {
-    return this.state === "tool" || this.state === "thinking" ? "hoverWork" : "hover";
+    if (this.state === "tool") return "hoverWork";
+    if (this.state === "thinking") return "hoverThink";
+    return "hover";
   }
 
   /// Cursor over the crab: hover hijacks whatever is playing; leaving restores
@@ -144,8 +147,9 @@ export class StateMachine {
     this._stopMicro();
     this._sleeping = false;
     this._idleSince = Date.now();
-    const seated = this.state === "tool" || this.state === "thinking";
-    this.r.play(seated ? "petWork" : "celebrate");
+    const petAnim =
+      this.state === "tool" ? "petWork" : this.state === "thinking" ? "petThink" : "celebrate";
+    this.r.play(petAnim);
     clearTimeout(this._decay);
     this._decay = setTimeout(() => this.apply(prev), 700);
   }

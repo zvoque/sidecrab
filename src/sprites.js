@@ -38,8 +38,10 @@ export const SPRITES = {
   // Thinking: seated at the laptop, still. The thought bubble is a persistent
   // renderer entity (setThought) so it survives hover and needs no frames.
   think: { loop: true, steps: [{ i: 26, ms: 60000 }] },
-  // Hovered while seated: stays at the laptop and squints up at you.
+  // Hovered while seated: stays at the laptop and squints up at you. The frame
+  // matches the underlying pose — typing (24) vs pondering with arms at rest (26).
   hoverWork: { loop: true, steps: [{ i: 24, ms: 60000, squint: true }] },
+  hoverThink: { loop: true, steps: [{ i: 26, ms: 60000, squint: true }] },
   // Petted while seated: happy little bounce without leaving the desk.
   petWork: {
     loop: true,
@@ -48,6 +50,15 @@ export const SPRITES = {
       { i: 24, ms: 140 },
       { i: 24, ms: 120, dy: -2 },
       { i: 24, ms: 160 },
+    ],
+  },
+  petThink: {
+    loop: true,
+    steps: [
+      { i: 26, ms: 140, dy: -3 },
+      { i: 26, ms: 140 },
+      { i: 26, ms: 120, dy: -2 },
+      { i: 26, ms: 160 },
     ],
   },
   // Working (any tool): side profile at his laptop, both claws hammering keys.
