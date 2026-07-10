@@ -52,8 +52,9 @@ Whatever he's wearing rides along through every animation.
 ## Requirements
 
 Just Claude Code. No node, no python, nothing else. The activity feed comes from
-a small bundled binary that runs off Claude Code's hooks, so any surface that
-fires the hooks in your `~/.claude/settings.json` (the CLI does) drives the crab.
+a small bundled binary that runs off Claude Code's hooks. Verified with the
+**CLI** and the **Claude desktop app**; any other surface that fires the hooks in
+your `~/.claude/settings.json` works too.
 
 ## Setup
 
@@ -63,6 +64,11 @@ remove them anytime from his right-click menu.
 
 Everything else lives in that menu: size, position, hats, wander, and **Launch
 at login**. Update with `brew upgrade sidecrab`.
+
+## Coming later
+
+- A downloadable `.dmg` for a no-terminal install
+- A Windows build
 
 ## Trademark & IP
 
