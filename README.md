@@ -78,5 +78,5 @@ note in [LICENSE](LICENSE)). Original replacement art is maintained on the
 `feat/original-art` branch.
 
 If this project violates or impedes your trademark or copyright, open an issue
-and it will be addressed promptly. This is a free side project; it is not
-monetized.
+or reach me on X ([@zvoque](https://x.com/zvoque)) and it will be addressed
+promptly. This is a free side project; it is not monetized.
