@@ -60,56 +60,75 @@ fn set_drag_lock(state: tauri::State<DragLock>, locked: bool) {
     *state.0.lock().unwrap() = locked;
 }
 
-#[tauri::command]
-fn show_menu(window: WebviewWindow) {
-    let app = window.app_handle();
+/// The one settings menu, built fresh so checkmarks reflect current config.
+/// Used as the right-click popup AND (wrapped) as the macOS app menu.
+fn build_settings_menu(app: &AppHandle) -> Option<tauri::menu::Submenu<tauri::Wry>> {
+    let win = app.get_webview_window("main")?;
     let cfg = config::load();
     let hooks_on = hook_installer::hooks_installed(&paths::claude_settings_path());
+    let corner = os_actions::current_corner(&win);
 
     let size = SubmenuBuilder::new(app, "Size")
         .items(&[
-            &CheckMenuItemBuilder::with_id("size-S", "Small").checked(cfg.size == "S").build(app).unwrap(),
-            &CheckMenuItemBuilder::with_id("size-M", "Medium").checked(cfg.size == "M").build(app).unwrap(),
-            &CheckMenuItemBuilder::with_id("size-L", "Large").checked(cfg.size == "L").build(app).unwrap(),
+            &CheckMenuItemBuilder::with_id("size-S", "Small").checked(cfg.size == "S").build(app).ok()?,
+            &CheckMenuItemBuilder::with_id("size-M", "Medium").checked(cfg.size == "M").build(app).ok()?,
+            &CheckMenuItemBuilder::with_id("size-L", "Large").checked(cfg.size == "L").build(app).ok()?,
         ])
         .build()
-        .unwrap();
+        .ok()?;
 
     let position = SubmenuBuilder::new(app, "Position")
         .items(&[
-            &MenuItemBuilder::with_id("pos-tl", "Top Left").build(app).unwrap(),
-            &MenuItemBuilder::with_id("pos-tr", "Top Right").build(app).unwrap(),
-            &MenuItemBuilder::with_id("pos-bl", "Bottom Left").build(app).unwrap(),
-            &MenuItemBuilder::with_id("pos-br", "Bottom Right").build(app).unwrap(),
+            &CheckMenuItemBuilder::with_id("pos-tl", "Top Left").checked(corner == Some("tl")).build(app).ok()?,
+            &CheckMenuItemBuilder::with_id("pos-tr", "Top Right").checked(corner == Some("tr")).build(app).ok()?,
+            &CheckMenuItemBuilder::with_id("pos-bl", "Bottom Left").checked(corner == Some("bl")).build(app).ok()?,
+            &CheckMenuItemBuilder::with_id("pos-br", "Bottom Right").checked(corner == Some("br")).build(app).ok()?,
         ])
         .separator()
-        .items(&[&MenuItemBuilder::with_id("pos-reset", "Reset Position").build(app).unwrap()])
+        .items(&[&MenuItemBuilder::with_id("pos-reset", "Reset Position").build(app).ok()?])
         .build()
-        .unwrap();
+        .ok()?;
 
     let wander = CheckMenuItemBuilder::with_id("wander", "Wander when idle")
         .checked(cfg.wander_enabled)
         .build(app)
-        .unwrap();
+        .ok()?;
 
     let hooks = if hooks_on {
-        MenuItemBuilder::with_id("hooks-remove", "Remove Claude Code hooks").build(app).unwrap()
+        MenuItemBuilder::with_id("hooks-remove", "Remove Claude Code hooks").build(app).ok()?
     } else {
-        MenuItemBuilder::with_id("hooks-install", "Enable activity detection…").build(app).unwrap()
+        MenuItemBuilder::with_id("hooks-install", "Enable activity detection…").build(app).ok()?
     };
 
-    let menu = MenuBuilder::new(app)
+    SubmenuBuilder::new(app, "Clawd Pet")
         .item(&size)
         .item(&position)
         .item(&wander)
         .separator()
         .item(&hooks)
         .separator()
-        .item(&MenuItemBuilder::with_id("quit", "Quit Clawd Pet").build(app).unwrap())
+        .items(&[&MenuItemBuilder::with_id("quit", "Quit Clawd Pet")
+            .accelerator("CmdOrCtrl+Q")
+            .build(app)
+            .ok()?])
         .build()
-        .unwrap();
+        .ok()
+}
 
-    let _ = window.popup_menu(&menu);
+/// macOS menu bar: the settings live under the app-name menu (no tray icon).
+pub(crate) fn refresh_app_menu(app: &AppHandle) {
+    if let Some(settings) = build_settings_menu(app) {
+        if let Ok(menu) = MenuBuilder::new(app).item(&settings).build() {
+            let _ = app.set_menu(menu);
+        }
+    }
+}
+
+#[tauri::command]
+fn show_menu(window: WebviewWindow) {
+    if let Some(menu) = build_settings_menu(window.app_handle()) {
+        let _ = window.popup_menu(&menu);
+    }
 }
 
 fn on_menu(app: &AppHandle, id: &str) {
@@ -146,6 +165,7 @@ fn on_menu(app: &AppHandle, id: &str) {
         "quit" => app.exit(0),
         _ => {}
     }
+    refresh_app_menu(app); // keep menu-bar checkmarks in sync with the change
 }
 
 /// Poll the global cursor; make empty window pixels click-through. When the cursor
@@ -235,6 +255,7 @@ pub fn run() {
             }
 
             app.on_menu_event(|app, event| on_menu(app, event.id().as_ref()));
+            refresh_app_menu(app.handle()); // settings under the app-name menu too
             state_watcher::spawn(app.handle().clone());
             spawn_click_through_poller(app.handle().clone());
             idle_monitor::spawn(app.handle().clone());

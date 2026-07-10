@@ -19,11 +19,10 @@ pub fn logical_size(size: &str) -> (f64, f64) {
         .unwrap_or((153.0, 144.0))
 }
 
-/// Place the window in a monitor corner ("tl"|"tr"|"bl"|"br"). Computes the
-/// window's physical size from config (outer_size may be stale mid-resize).
-/// When `persist` is set the spot becomes the new home.
-pub fn place_corner(window: &WebviewWindow, corner: &str, persist: bool) {
-    let Ok(Some(mon)) = window.current_monitor() else { return };
+/// Physical position of a monitor corner ("tl"|"tr"|"bl"|"br") for the current
+/// window size (computed from config — outer_size may be stale mid-resize).
+pub fn corner_pos(window: &WebviewWindow, corner: &str) -> Option<(i32, i32)> {
+    let mon = window.current_monitor().ok()??;
     let m = mon.size();
     let mp = mon.position();
     let scale = mon.scale_factor();
@@ -38,6 +37,23 @@ pub fn place_corner(window: &WebviewWindow, corner: &str, persist: bool) {
         "tl" | "tr" => mp.y + margin,
         _ => mp.y + m.height as i32 - h - margin,
     };
+    Some((x, y))
+}
+
+/// Which corner the crab's HOME currently is, if any (drag spots return None).
+pub fn current_corner(window: &WebviewWindow) -> Option<&'static str> {
+    let home = config::load()
+        .position
+        .or_else(|| window.outer_position().ok().map(|p| (p.x, p.y)))?;
+    ["tl", "tr", "bl", "br"].into_iter().find(|c| {
+        corner_pos(window, c)
+            .is_some_and(|(x, y)| (x - home.0).abs() <= 10 && (y - home.1).abs() <= 10)
+    })
+}
+
+/// Place the window in a corner; when `persist` is set the spot becomes home.
+pub fn place_corner(window: &WebviewWindow, corner: &str, persist: bool) {
+    let Some((x, y)) = corner_pos(window, corner) else { return };
     let _ = window.set_position(tauri::PhysicalPosition::new(x, y));
     if persist {
         let mut c = config::load();
@@ -69,13 +85,14 @@ pub fn get_geometry(window: WebviewWindow) -> Option<serde_json::Value> {
     }))
 }
 
-/// Persist the current window position (called on drag end).
+/// Persist the current window position as home (called on drag end).
 #[tauri::command]
 pub fn persist_position(window: WebviewWindow) {
     if let Ok(pos) = window.outer_position() {
         let mut c = config::load();
         c.position = Some((pos.x, pos.y));
         let _ = config::save(&c);
+        crate::refresh_app_menu(window.app_handle()); // corner checkmarks may change
     }
 }
 
