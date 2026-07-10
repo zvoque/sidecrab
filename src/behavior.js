@@ -1,6 +1,12 @@
 // Wander-when-idle: when the USER goes idle (and the toggle is on) the crab takes
-// random walks around the current display; on user input it scurries back to its
-// resting spot. Claude activity always preempts — the crab teleports home and reacts.
+// random walks around the current display; on user input it walks back to its
+// resting spot.
+//
+// Invariant: the window NEVER moves unless the walk animation is playing. Every
+// movement step re-checks `renderer.anim === "walk"`; if anything (Claude state,
+// petting) takes over the animation, movement halts on the spot and the crab
+// reacts right where it is. Idle micro-life is suspended for the whole excursion
+// so it can't freeze the legs mid-walk.
 
 const STEP_MS = 28;
 const WANDER_SPEED = 3; // px per step
@@ -20,7 +26,7 @@ export function attachBehavior({ renderer, sm }) {
   invoke("get_config").then((c) => (enabled = c.wanderEnabled));
   listen("wander-changed", (e) => {
     enabled = !!e.payload;
-    if (!enabled) abortToHome(true);
+    if (!enabled) mode = "off";
   });
   listen("user-active", () => {
     if (mode === "wander") mode = "home";
@@ -35,25 +41,21 @@ export function attachBehavior({ renderer, sm }) {
     }
   }, 3000);
 
-  /// Claude went busy mid-wander: snap home immediately so the reaction is visible
-  /// where the user expects the crab to live.
+  /// Claude went busy mid-wander: stop moving immediately and react in place.
+  /// No teleporting — the crab only ever relocates on its own legs.
   function onClaudeState(payload) {
-    if (payload?.state && payload.state !== "idle" && mode !== "off") abortToHome(true);
+    if (payload?.state && payload.state !== "idle" && mode !== "off") mode = "off";
   }
 
-  function abortToHome(teleport) {
-    mode = "off";
-    if (teleport && home) invoke("set_window_pos", { x: home.x, y: home.y });
-    renderer.setFacing("right");
-  }
-
+  /// Step the window toward (tx,ty). Halts the moment the walk anim is replaced —
+  /// movement and leg animation are never allowed to desync.
   async function walkTo(tx, ty, speed, live) {
     renderer.play("walk");
     const g = await invoke("get_geometry");
     if (!g) return;
     let { winX: x, winY: y } = g;
     renderer.setFacing(tx < x ? "left" : "right");
-    while (live() && Math.hypot(tx - x, ty - y) > speed) {
+    while (live() && renderer.anim === "walk" && Math.hypot(tx - x, ty - y) > speed) {
       const ang = Math.atan2(ty - y, tx - x);
       x += Math.cos(ang) * speed;
       y += Math.sin(ang) * speed;
@@ -65,10 +67,12 @@ export function attachBehavior({ renderer, sm }) {
   async function drive() {
     if (driving) return;
     driving = true;
+    sm.pauseIdleLife();
     const g = await invoke("get_geometry");
     if (!g) {
       driving = false;
       mode = "off";
+      sm.resumeIdleLife();
       return;
     }
     home = { x: g.winX, y: g.winY };
@@ -78,8 +82,12 @@ export function attachBehavior({ renderer, sm }) {
       const ty = g.monY + Math.random() * Math.max(1, g.monH - g.winH);
       await walkTo(tx, ty, WANDER_SPEED, () => mode === "wander");
       if (mode !== "wander") break;
+      if (renderer.anim !== "walk") {
+        // Something else claimed the animation (pet, Claude) — excursion over.
+        mode = "off";
+        break;
+      }
       renderer.play("rest");
-      // Pause between walks; bail early if anything changes.
       for (let t = 0; t < 2000 + Math.random() * 3000 && mode === "wander"; t += 100) {
         await sleep(100);
       }
@@ -87,11 +95,11 @@ export function attachBehavior({ renderer, sm }) {
 
     if (mode === "home" && home) {
       await walkTo(home.x, home.y, HOME_SPEED, () => mode === "home");
-      invoke("set_window_pos", { x: home.x, y: home.y });
     }
     mode = "off";
     driving = false;
     renderer.setFacing("right");
+    sm.resumeIdleLife();
     sm.apply({ state: sm.current() }); // restore the proper animation
   }
 

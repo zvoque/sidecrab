@@ -27,10 +27,22 @@ export class StateMachine {
     this._stopMicro();
     const delay = MICRO_MIN_MS + Math.random() * (MICRO_MAX_MS - MICRO_MIN_MS);
     this._micro = setTimeout(() => {
-      if (this.state !== "idle") return;
+      if (this.state !== "idle" || this._microPaused) return;
       const anim = MICRO[Math.floor(Math.random() * MICRO.length)];
       this.r.play(anim, () => this._scheduleMicro()); // one-shot, then re-arm
     }, delay);
+  }
+
+  /// Wander drives the window; a micro-anim mid-walk would freeze the legs while
+  /// the window still moves. Behavior pauses idle life for the whole excursion.
+  pauseIdleLife() {
+    this._microPaused = true;
+    this._stopMicro();
+  }
+
+  resumeIdleLife() {
+    this._microPaused = false;
+    if (this.state === "idle") this._scheduleMicro();
   }
 
   apply({ state, tool } = {}) {
