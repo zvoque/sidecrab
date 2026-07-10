@@ -130,6 +130,7 @@ fn on_menu(app: &AppHandle, id: &str) {
 fn spawn_click_through_poller(app: AppHandle) {
     std::thread::spawn(move || {
         let mut ignoring = false;
+        let mut hovering = false;
         loop {
             std::thread::sleep(std::time::Duration::from_millis(120));
             let Some(win) = app.get_webview_window("main") else { continue };
@@ -151,6 +152,11 @@ fn spawn_click_through_poller(app: AppHandle) {
             } else {
                 false
             };
+            // The same over_crab signal drives the hover reaction in the frontend.
+            if over_crab != hovering {
+                hovering = over_crab;
+                let _ = app.emit("crab-hover", hovering);
+            }
             // Ignore events only while the cursor is over empty pixels of our window;
             // outside the window the flag is irrelevant, so reset it for safety.
             let want_ignore = inside_window && !over_crab;

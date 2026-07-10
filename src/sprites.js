@@ -38,6 +38,8 @@ export const SPRITES = {
   think: { loop: true, steps: [ { i: 4, ms: 500 }, { i: 5, ms: 500 }, { i: 4, ms: 500 }, { i: 0, ms: 700 } ] },
   // Editing: quick fidget, like tapping away.
   type: { loop: true, steps: [ { i: 5, ms: 130 }, { i: 7, ms: 130 } ] },
+  // Hovered: crouch down (legs sink into the ground) and squint contentedly.
+  hover: { loop: true, steps: [{ i: 0, ms: 60000, dy: 3, squint: true }] },
   // Awaiting permission: still, urgent "!" bubble pulsing.
   alert: { loop: true, steps: [ { i: 0, ms: 550, bubble: true }, { i: 0, ms: 350 } ] },
   // Done: happy double hop.
@@ -133,6 +135,11 @@ export class SpriteRenderer {
     return mask;
   }
 
+  _eyeHasBelow(p) {
+    if (!this._eyeSet) this._eyeSet = new Set((this._eyeMask || []).map((q) => `${q.x},${q.y}`));
+    return this._eyeSet.has(`${p.x},${p.y + 1}`);
+  }
+
   _loop(now) {
     const dt = now - this._last;
     this._last = now;
@@ -170,9 +177,12 @@ export class SpriteRenderer {
     }
     const y = CRAB_Y + (s.dy || 0);
     ctx.drawImage(img, 0, y);
-    if (s.blink) {
+    if (s.blink || s.squint) {
       if (!this._eyeMask) this._eyeMask = this._computeEyeMask();
       for (const p of this._eyeMask || []) {
+        // Squint closes only the upper half of each eye (pixels that have another
+        // eye pixel directly beneath them); blink closes everything.
+        if (s.squint && !s.blink && !this._eyeHasBelow(p)) continue;
         ctx.fillStyle = p.fill;
         ctx.fillRect(p.x, p.y + y, 1, 1);
       }

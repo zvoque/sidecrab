@@ -48,9 +48,9 @@ export class StateMachine {
 
   apply({ state, tool } = {}) {
     const next = state || "idle";
-    // Repeat idle events (hook chatter) must not reset the micro-life timer,
-    // or the crab never gets around to blinking during an active session.
-    if (next === "idle" && this.state === "idle" && this._micro) return;
+    // Repeat idle events (hook chatter) must not reset the micro-life timer
+    // (or cancel an active hover), or the crab never gets around to blinking.
+    if (next === "idle" && this.state === "idle" && (this._micro || this._hovering)) return;
     clearTimeout(this._decay);
     this._stopMicro();
     this.state = next;
@@ -71,13 +71,31 @@ export class StateMachine {
         this._decay = setTimeout(() => this.apply({ state: "idle" }), DONE_MS);
         break;
       default:
-        this.r.play("rest");
-        this._scheduleMicro();
+        if (this._hovering) {
+          this.r.play("hover"); // work ended under the cursor — settle into the crouch
+        } else {
+          this.r.play("rest");
+          this._scheduleMicro();
+        }
     }
   }
 
   current() {
     return this.state;
+  }
+
+  /// Cursor over the crab: crouch + squint while idle. Busy states outrank it,
+  /// and leaving hover restores normal idle life.
+  setHover(on) {
+    this._hovering = !!on;
+    if (this.state !== "idle") return;
+    if (on) {
+      this._stopMicro();
+      this.r.play("hover");
+    } else {
+      this.r.play("rest");
+      this._scheduleMicro();
+    }
   }
 
   /// Petting reaction: quick happy hop, then back to whatever was happening.
