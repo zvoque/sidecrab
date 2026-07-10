@@ -5,6 +5,8 @@ over your screen and reacts to what Claude Code is doing — thinking, running c
 editing, awaiting permission, done. Inspired by the Codex pet in the ChatGPT desktop app
 and the crab in [claude-status-bar](https://github.com/m1ckc3s/claude-status-bar).
 
+<p align="center"><img src="docs/gifs/hero.gif" width="480" alt="Sidecrab on the desktop"></p>
+
 ## What he does
 
 | | | | |
