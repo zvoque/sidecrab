@@ -51,8 +51,27 @@ else: no network, no telemetry, no reading your code.
 # prerequisites: rust toolchain + npm
 npm install
 npm run tauri dev     # dev
-npm run tauri build   # .app bundle
+npm run dist          # sidecar + .app + .dmg (+ signed updater artifacts)
 ```
+
+## Releasing
+
+1. Bump `version` in `src-tauri/tauri.conf.json` (and `package.json`).
+2. Commit, tag `vX.Y.Z`, push the tag.
+3. The `release` GitHub Action builds a universal macOS app + DMG, signs the
+   updater artifacts, and publishes a draft release including `latest.json`.
+4. Publish the draft — the in-app **Check for Updates…** (right-click menu)
+   finds it via `releases/latest/download/latest.json`, downloads, installs
+   over the old app, and relaunches.
+
+Setup once: add repo secrets `TAURI_SIGNING_PRIVATE_KEY` (contents of
+`~/.tauri/clawd-pet.key`) and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` (empty).
+Losing that key breaks updates for existing installs — back it up.
+
+Gatekeeper: without Apple notarization, downloaded builds show macOS's
+"unverified app" flow (System Settings → Privacy & Security → Open Anyway).
+For frictionless installs add the `APPLE_*` secrets (Developer ID, $99/yr) —
+the workflow picks them up automatically.
 
 Dev niceties:
 - `CLAWD_PET_IDLE_SECS=10` lowers the wander idle threshold for testing.

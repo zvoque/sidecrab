@@ -10,3 +10,5 @@ dist/
 
 # Anthropic-IP reference frames — never commit
 art/reference/
+/src-tauri/binaries/
+node_modules/

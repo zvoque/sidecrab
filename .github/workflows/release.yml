@@ -1,0 +1,59 @@
+# Release pipeline: push a tag like v0.2.0 → build the macOS app (universal),
+# sign updater artifacts, and publish a GitHub release with latest.json for the
+# in-app auto-updater.
+#
+# Required repo secrets:
+#   TAURI_SIGNING_PRIVATE_KEY          — contents of ~/.tauri/clawd-pet.key
+#   TAURI_SIGNING_PRIVATE_KEY_PASSWORD — empty string (key generated without one)
+# Optional (Apple notarization, when a Developer ID exists):
+#   APPLE_CERTIFICATE, APPLE_CERTIFICATE_PASSWORD, APPLE_SIGNING_IDENTITY,
+#   APPLE_ID, APPLE_PASSWORD, APPLE_TEAM_ID
+name: release
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  build:
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci || npm install
+
+      # Sidecar hook binary for both architectures → universal binary
+      - name: Build sidecar (universal)
+        run: |
+          cd src-tauri
+          cargo build --release --bin clawd-pet-hook --target aarch64-apple-darwin
+          cargo build --release --bin clawd-pet-hook --target x86_64-apple-darwin
+          mkdir -p binaries
+          lipo -create \
+            target/aarch64-apple-darwin/release/clawd-pet-hook \
+            target/x86_64-apple-darwin/release/clawd-pet-hook \
+            -output binaries/clawd-pet-hook-universal-apple-darwin
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        with:
+          args: --target universal-apple-darwin
+          tagName: ${{ github.ref_name }}
+          releaseName: "v__VERSION__"
+          releaseDraft: true
+          includeUpdaterJson: true

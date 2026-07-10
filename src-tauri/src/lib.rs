@@ -9,6 +9,59 @@ use std::sync::Mutex;
 use tauri::menu::{CheckMenuItemBuilder, MenuBuilder, MenuItemBuilder, SubmenuBuilder};
 use tauri::{AppHandle, Emitter, Manager, WebviewWindow};
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
+use tauri_plugin_updater::UpdaterExt;
+
+/// Check GitHub releases; on confirmation download, install over the old app,
+/// and relaunch. Silent about errors beyond a dialog — never blocks the pet.
+fn check_for_updates(app: AppHandle) {
+    tauri::async_runtime::spawn(async move {
+        let updater = match app.updater() {
+            Ok(u) => u,
+            Err(_) => return,
+        };
+        match updater.check().await {
+            Ok(Some(update)) => {
+                let version = update.version.clone();
+                let handle = app.clone();
+                app.dialog()
+                    .message(format!(
+                        "Version {version} is available (you have {}).\n\nDownload and install now?",
+                        handle.package_info().version
+                    ))
+                    .title("Update available")
+                    .buttons(MessageDialogButtons::OkCancelCustom("Update".into(), "Later".into()))
+                    .show(move |yes| {
+                        if !yes {
+                            return;
+                        }
+                        tauri::async_runtime::spawn(async move {
+                            if update.download_and_install(|_, _| {}, || {}).await.is_ok() {
+                                handle.restart();
+                            } else {
+                                handle
+                                    .dialog()
+                                    .message("Update failed to install. Grab it manually from GitHub releases.")
+                                    .title("Update error")
+                                    .show(|_| {});
+                            }
+                        });
+                    });
+            }
+            Ok(None) => {
+                app.dialog()
+                    .message("You're on the latest version.")
+                    .title("No updates")
+                    .show(|_| {});
+            }
+            Err(e) => {
+                app.dialog()
+                    .message(format!("Update check failed: {e}"))
+                    .title("Update error")
+                    .show(|_| {});
+            }
+        }
+    });
+}
 
 const CONSENT_TEXT: &str = "To react to Claude Code activity, Clawd Pet adds hooks to \
 ~/.claude/settings.json.\n\nYour file is backed up to settings.json.bak first, existing \
@@ -119,10 +172,13 @@ fn build_settings_menu(app: &AppHandle) -> Option<tauri::menu::Submenu<tauri::Wr
         .separator()
         .item(&hooks)
         .separator()
-        .items(&[&MenuItemBuilder::with_id("quit", "Quit Clawd Pet")
-            .accelerator("CmdOrCtrl+Q")
-            .build(app)
-            .ok()?])
+        .items(&[
+            &MenuItemBuilder::with_id("update-check", "Check for Updates…").build(app).ok()?,
+            &MenuItemBuilder::with_id("quit", "Quit Clawd Pet")
+                .accelerator("CmdOrCtrl+Q")
+                .build(app)
+                .ok()?,
+        ])
         .build()
         .ok()
 }
@@ -190,6 +246,7 @@ fn on_menu(app: &AppHandle, id: &str) {
         "hooks-remove" => {
             let _ = os_actions::hooks_remove();
         }
+        "update-check" => check_for_updates(app.clone()),
         "quit" => app.exit(0),
         _ => {}
     }
@@ -245,6 +302,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(OpaqueRect(Mutex::new((0.0, 0.0, 1.0, 1.0))))
         .manage(DragLock(Mutex::new(false)))
         .invoke_handler(tauri::generate_handler![
