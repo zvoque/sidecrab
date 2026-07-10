@@ -35,15 +35,20 @@ export const SPRITES = {
     loop: true,
     steps: Array.from({ length: 15 }, (_, k) => ({ i: k + 5, ms: 70 })),
   },
-  // Thinking: seated at the laptop, gazing up, thought bubble percolating.
+  // Thinking: seated at the laptop, gazing up, thought bubble typing "…".
   think: {
     loop: true,
-    steps: [ { i: 26, ms: 900, thought: 0 }, { i: 26, ms: 900, thought: 1 } ],
+    steps: [
+      { i: 26, ms: 450, thought: 0 },
+      { i: 26, ms: 450, thought: 1 },
+      { i: 26, ms: 450, thought: 2 },
+      { i: 26, ms: 650, thought: 3 },
+    ],
   },
   // Hovered while seated: stays at the laptop and squints up at you.
   hoverWork: { loop: true, steps: [{ i: 24, ms: 60000, squint: true }] },
-  // Working (any tool): side profile at his laptop, claw tapping, screen flicker.
-  work: { loop: true, steps: [ { i: 24, ms: 260 }, { i: 25, ms: 260 } ] },
+  // Working (any tool): side profile at his laptop, both claws hammering keys.
+  work: { loop: true, steps: [ { i: 24, ms: 130 }, { i: 25, ms: 130 } ] },
   // Panic: full-tilt scramble — used while being carried (drag) and cursor-chasing.
   panic: {
     loop: true,
@@ -110,21 +115,31 @@ const HAT_COLORS = {
   g: "#5a5f6a", // rotor gray
 };
 const HATS = {
+  // Tall stovepipe — unmistakably a top hat.
   top: [
+    "...kkkkkkkk...",
+    "...kkkkkkkk...",
+    "...kkkkkkkk...",
     "...kkkkkkkk...",
     "...kkkkkkkk...",
     "...kkkkkkkk...",
     "...bbbbbbbb...",
     "kkkkkkkkkkkkkk",
   ],
+  // Toque: tall white puff ballooning over a straight band.
   chef: [
-    ".wwwwwwwwwww.",
-    "wwwwwwwwwwwww",
-    "wwwwwwwwwwwww",
-    ".ddddddddddd.",
+    "...wwwwwww....",
+    ".wwwwwwwwwww..",
+    "wwwwwwwwwwwww.",
+    "wwwwwwwwwwwww.",
+    ".wwwwwwwwwww..",
+    "..wwwwwwwww...",
+    "..ddddddddd...",
+    "..ddddddddd...",
   ],
+  // Fedora: short pinched crown, band, wide brim.
   fedora: [
-    "....kkkkkkkk....",
+    ".....kkkkkk.....",
     "....kkkkkkkk....",
     "....bbbbbbbb....",
     "kkkkkkkkkkkkkkkk",
@@ -155,6 +170,7 @@ export class SpriteRenderer {
     this.facing = 1; // 1 = natural, -1 = flipped
     this._acc = 0;
     this._last = 0;
+    this._t = 0; // wall-clock accumulator (drives the heli rotor)
     this._raf = null;
     this._onFinish = null; // one-shot completion callback
     this._loop = this._loop.bind(this);
@@ -280,6 +296,7 @@ export class SpriteRenderer {
     try {
       const dt = now - this._last;
       this._last = now;
+      this._t += dt;
       const a = SPRITES[this.anim];
       this._acc += dt;
       if (this._acc >= a.steps[this.step].ms) {
@@ -382,20 +399,23 @@ export class SpriteRenderer {
     }
   }
 
-  /// Thought bubble above the head: trailing dots up to a little cloud, with a
-  /// subtle two-phase drift while he ponders.
+  /// Thought bubble above the head: trailing dots up to a cloud that types an
+  /// animated "…" — phase = how many dots are lit (0-3).
   _drawThought(i, phase, y) {
     const a = this._headAnchor(i);
     if (!a) return;
     const ctx = this.ctx;
     const cx = Math.round(this.facing === -1 ? CANVAS_W - a.cx : a.cx);
     const top = y + a.top;
-    const d = phase ? 1 : 0;
     ctx.fillStyle = BUBBLE;
-    ctx.fillRect(cx + 2, top - 3 - d, 1, 1);            // tiny dot
-    ctx.fillRect(cx + 4, top - 6 - d, 2, 2);            // middle dot
-    ctx.fillRect(cx + 7, top - 12 - d, 6, 4);           // cloud
-    ctx.fillRect(cx + 8, top - 13 - d, 4, 6);           // cloud rounding
+    ctx.fillRect(cx + 2, top - 3, 1, 1);     // tiny trailing dot
+    ctx.fillRect(cx + 4, top - 6, 2, 2);     // middle trailing dot
+    ctx.fillRect(cx + 6, top - 13, 10, 5);   // cloud
+    ctx.fillRect(cx + 7, top - 14, 8, 7);    // cloud rounding
+    ctx.fillStyle = "#6b6b74";               // "…" typing inside the cloud
+    for (let n = 0; n < phase; n++) {
+      ctx.fillRect(cx + 8 + n * 3, top - 11, 1, 1);
+    }
   }
 
   /// Sleep Z's drifting up-right of the head; `phase` alternates the drift.
