@@ -77,6 +77,7 @@ pub fn resize_window(window: WebviewWindow, size: String) {
     let before = (window.outer_position().ok(), window.outer_size().ok());
     let scale = window.scale_factor().unwrap_or(2.0);
     let _ = window.set_size(tauri::LogicalSize::new(lw, lh));
+    let mut c = config::load();
     if let (Some(pos), Some(old)) = before {
         let (new_w, new_h) = ((lw * scale).round() as i32, (lh * scale).round() as i32);
         let (x, y) = (
@@ -84,13 +85,17 @@ pub fn resize_window(window: WebviewWindow, size: String) {
             pos.y + old.height as i32 - new_h,
         );
         let _ = window.set_position(tauri::PhysicalPosition::new(x, y));
-        let mut c = config::load();
-        c.position = Some((x, y));
-        c.size = size;
-        let _ = config::save(&c);
-        return;
+        // Update the persisted HOME only if the crab was actually at home when
+        // resized. Resizing a displaced (wandering/stranded) crab must not turn
+        // its current spot into the new home — only dragging redefines home.
+        let at_home = c
+            .position
+            .map(|(hx, hy)| (hx - pos.x).abs() <= 12 && (hy - pos.y).abs() <= 12)
+            .unwrap_or(true);
+        if at_home {
+            c.position = Some((x, y));
+        }
     }
-    let mut c = config::load();
     c.size = size;
     let _ = config::save(&c);
 }
