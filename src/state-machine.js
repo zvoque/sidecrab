@@ -8,7 +8,7 @@ const DONE_MS = 1500; // celebrate length before settling back to rest
 const MICRO = ["look", "look", "shuffle", "stretch", "peek", "wave"]; // ambient blink handles blinking
 const MICRO_MIN_MS = 3000;
 const MICRO_MAX_MS = 9000;
-const SLEEP_AFTER_MS = 90_000; // continuous idle before nodding off
+const SLEEP_AFTER_MS = 180_000; // boredom (since last activity OR excursion) before nodding off
 
 export class StateMachine {
   constructor(renderer) {
@@ -48,6 +48,7 @@ export class StateMachine {
   /// the window still moves. Behavior pauses idle life for the whole excursion.
   pauseIdleLife() {
     this._microPaused = true;
+    this._sleeping = false; // heading out on an excursion = waking up
     this._stopMicro();
   }
 
@@ -56,6 +57,9 @@ export class StateMachine {
   /// apply()'s repeat-idle guard and leave the walk animation frozen).
   resumeIdleLife() {
     this._microPaused = false;
+    // Fresh boredom clock after any excursion — wandering postpones sleep, so
+    // he gets his walks in before nodding off.
+    this._idleSince = Date.now();
   }
 
   apply({ state, tool } = {}) {
