@@ -2,6 +2,7 @@
 // running inside Tauri. In a plain browser (art iteration) keys 1-6 cycle states.
 import { SpriteRenderer } from "./sprites.js";
 import { StateMachine } from "./state-machine.js";
+import { attachInput } from "./input.js";
 
 const IN_TAURI = typeof window.__TAURI__ !== "undefined";
 
@@ -13,8 +14,13 @@ window.addEventListener("DOMContentLoaded", async () => {
   renderer.start();
 
   if (IN_TAURI) {
+    let host = "Claude"; // last seen host app, for double-click activation
+    attachInput({ renderer, sm, getHost: () => host });
     const { listen } = window.__TAURI__.event;
-    await listen("claude-state", (e) => sm.apply(e.payload));
+    await listen("claude-state", (e) => {
+      if (e.payload?.host) host = e.payload.host;
+      sm.apply(e.payload);
+    });
   } else {
     // Browser-only dev cycler for eyeballing animations.
     const DEV = [

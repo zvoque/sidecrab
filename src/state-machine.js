@@ -14,6 +14,7 @@ export class StateMachine {
   apply({ state, tool } = {}) {
     clearTimeout(this._decay);
     this.state = state || "idle";
+    this._lastTool = tool;
     switch (this.state) {
       case "thinking":
         this.r.play("think");
@@ -39,5 +40,13 @@ export class StateMachine {
 
   current() {
     return this.state;
+  }
+
+  /// Petting reaction: quick happy hop, then back to whatever was happening.
+  pet() {
+    const prev = { state: this.state, tool: this._lastTool };
+    this.r.play("celebrate");
+    clearTimeout(this._decay);
+    this._decay = setTimeout(() => this.apply(prev), 700);
   }
 }

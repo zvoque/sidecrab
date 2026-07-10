@@ -142,6 +142,24 @@ export class SpriteRenderer {
     this.facing = dir === "left" ? -1 : 1;
   }
 
+  /// Union bounding box of non-transparent pixels across the current animation's
+  /// frames, as fractions of the canvas — the hit shape for click-through.
+  bounds() {
+    let x0 = W, y0 = H, x1 = 0, y1 = 0;
+    for (const f of SPRITES[this.anim].frames) {
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          if (f.cells[y][x] === 0) continue;
+          if (x < x0) x0 = x;
+          if (y < y0) y0 = y;
+          if (x + 1 > x1) x1 = x + 1;
+          if (y + 1 > y1) y1 = y + 1;
+        }
+      }
+    }
+    return { x0: x0 / W, y0: y0 / H, x1: x1 / W, y1: y1 / H };
+  }
+
   start() {
     if (this._raf) return;
     this._last = performance.now();
