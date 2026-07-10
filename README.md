@@ -82,11 +82,20 @@ Dev niceties:
 Tests: `cd src-tauri && cargo test` (hook event mapping, settings.json installer,
 config persistence).
 
-## IP note
+## Trademark & IP disclaimer
 
-The crab sprite frames are the official Clawd walk cycle (Anthropic's Claude Code
-mascot), extracted from `Clawd-CrabWalking.gif` by way of
-[claude-status-bar](https://github.com/m1ckc3s/claude-status-bar)'s `CrabFrames.swift`.
-Clawd's name and design are Anthropic's trademark/IP. This is a **personal-use
-project** — do not redistribute the app or the frames. If you fork for distribution,
-replace `src/frames.js` with your own art.
+This is an unofficial, open-source side project. It is not affiliated with,
+endorsed by, or sponsored by Anthropic. "Claude", "Clawd", and the Clawd crab
+design are Anthropic's trademarks and intellectual property, referenced here
+nominatively. The walk-cycle sprite frames derive from Anthropic's Clawd
+artwork (by way of
+[claude-status-bar](https://github.com/m1ckc3s/claude-status-bar)'s extraction).
+
+This project is MIT licensed, but that covers the **source code only** and
+conveys no rights to Anthropic's trademarks, brand, or artwork (see the scope
+note in [LICENSE](LICENSE)). Original replacement art is maintained on the
+`feat/original-art` branch.
+
+If this project violates or impedes your trademark or copyright, open an issue
+and it will be addressed promptly. This is a free side project; it is not
+monetized.
