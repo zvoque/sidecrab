@@ -16,6 +16,9 @@ export class StateMachine {
     this.state = "idle";
     this._decay = null;
     this._micro = null;
+    // Must start "now": the boot state is idle→idle so apply() never stamps it,
+    // and an unset value made the sleep check pass instantly (insta-narcolepsy).
+    this._idleSince = Date.now();
   }
 
   _stopMicro() {

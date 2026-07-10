@@ -258,22 +258,30 @@ export class SpriteRenderer {
   }
 
   _loop(now) {
-    const dt = now - this._last;
-    this._last = now;
-    const a = SPRITES[this.anim];
-    this._acc += dt;
-    if (this._acc >= a.steps[this.step].ms) {
-      this._acc = 0;
-      if (this.step + 1 >= a.steps.length && !a.loop) {
-        const cb = this._onFinish;
-        this._onFinish = null;
-        this.play("rest");
-        if (cb) cb();
-      } else {
-        this.step = (this.step + 1) % a.steps.length;
+    // The rAF re-queue is unconditional: an exception anywhere in stepping or
+    // drawing must never freeze the pet permanently.
+    try {
+      const dt = now - this._last;
+      this._last = now;
+      const a = SPRITES[this.anim];
+      this._acc += dt;
+      if (this._acc >= a.steps[this.step].ms) {
+        this._acc = 0;
+        if (this.step + 1 >= a.steps.length && !a.loop) {
+          const cb = this._onFinish;
+          this._onFinish = null;
+          this.play("rest");
+          if (cb) cb();
+        } else {
+          this.step = (this.step + 1) % a.steps.length;
+        }
       }
+      this._draw();
+    } catch (err) {
+      console.error("render loop error", err);
+      this.anim = "rest";
+      this.step = 0;
     }
-    this._draw();
     this._raf = requestAnimationFrame(this._loop);
   }
 
