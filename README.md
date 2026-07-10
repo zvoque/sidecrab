@@ -9,6 +9,9 @@ Claude is doing. He sits at his laptop while Claude works, waves you down when a
 tool needs permission, wanders off when you step away, and naps when things go
 quiet.
 
+Inspired by the Codex pet in the ChatGPT desktop app and
+[claude-status-bar](https://github.com/m1ckc3s/claude-status-bar).
+
 <img src="docs/gifs/hero.gif" width="480" alt="Sidecrab on the desktop">
 
 ```bash
