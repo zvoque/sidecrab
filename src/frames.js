@@ -1,7 +1,7 @@
-// Official Clawd walk-cycle frames (20, 51x36 RGBA), extracted from
-// claude-status-bar's CrabFrames.swift (auto-generated from Clawd-CrabWalking.gif),
-// then hard-quantized to the flat 3-color palette to remove baked-in scaling AA.
-// Anthropic IP — personal use only, do not redistribute. See README.
+// Clawd frames: 0-19 official walk cycle (extracted via CSB, quantized to the
+// flat palette), 20-21 authored wave (raised claw + open pincer), 22-23 authored
+// stretch (body up on extended legs, arms up-out). 51x36 RGBA.
+// Frames 0-19 derive from Anthropic IP — personal use only. See README.
 export const FRAME_W = 51;
 export const FRAME_H = 36;
 export const WALK_PNGS = [
@@ -25,4 +25,8 @@ export const WALK_PNGS = [
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADMAAAAkCAYAAAAkcgIJAAAAtklEQVR4nO3WyQ2AIBAFUBr0bA1WYHnWYTUqBxIgIAMyw+InmYPb/HlxiUoR1rmvl65jW5wy+yWKMidpAdMrxkcAMxrmOdWpj8P7BczcmNIBmmL8htIveaoiT0Mc0/KLBQwwHRQwwPSGia1f/mgCAwwwwIyHkYRUwegmIYh9vCScch0LJgRKDZXTWxSTc2dKM956VEP5GLM9BYYjCJjSIG4MZYZqGPuLxhZEnIErQywImF6DcjJupPPh5UCgp0IAAAAASUVORK5CYII=",
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADMAAAAkCAYAAAAkcgIJAAAApUlEQVR4nO3Wyw2AIAwGYBb07AxO4HjO4TQ+DhwkFEop0ODfpBej/fmCL+cYdWzLFetzX7s1Z52sAgYYYNpgnlM/Xbn4sIGZGyNdwFBMOLD3Q55r4m6gMSPfWMAAY6CBAcYahqpf/mgCAwwwwNhGWYE0wfjjGqG565th3mEcTMnsbhhqR9SDErPUMvyAaTBT7QwwwixgSgJSGM1S/57EAoARZtVibpGj538vgj5NAAAAAElFTkSuQmCC",
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADMAAAAkCAYAAAAkcgIJAAAAlUlEQVR4nO3Wyw2AIBBFURt0bQ1WYHnWYTUoOzROcPg4iPclbycwJ37iMBDSRrZlctYthlnn0d0VDBgDzHHpqZnDXwumb0zqAKYYv4nlSx6r8DSAMS8YMGDAPMNI+eWPJhgwYDrC+E0kyCcxIejN4avfmRg65XBpXTMY7RlgtAHTMib8omkH0p5RFZM7UM5aMCXSCmYHrzxLmxWyz1IAAAAASUVORK5CYII=",
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADMAAAAkCAYAAAAkcgIJAAAAe0lEQVR4nO3Tuw2AMBCD4WzJKMzKNDxKCohPivAd+S25SSQrX5HWCmVbl/1q76xEwDyNZOmvMD0gGHdlwBvmPLp10MPCm2DAODAjHuIqmKwtjQl/7swFk7VzYZS4EWDAgAEDZi5M9P6rTSlgDJtSwBg2pYAxbEoBY9g8ANSlHSrdo/WDAAAAAElFTkSuQmCC",
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADMAAAAkCAYAAAAkcgIJAAAAfklEQVR4nO3TOw6AIBCEYW7pUTyrp/FRWFgQdgNhFvefZBowE77CUogux76dT1tnS6Qb836sLpgVMLX73Jj76NNBD21uVt7iCxgwnZgRD5lVMFH7O4zr545cMFGbC2OJGgEGDBgwYHJhvPezNk0BI9g0BYxg0xQwgk1TwAg2L7U6EpIxnUZTAAAAAElFTkSuQmCC",
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADMAAAAkCAYAAAAkcgIJAAAAb0lEQVR4nO3VwQ2AIABDUbZkFGd1GvHqyUqEFv1NeoGk4R2Mpfwt+1aPhIIBsyrmPLr0pYfeboIBk4AZ/dHOLJjUgkktmNR+C9Pz04x+LBgwYMCAWR7z9H7WphQwhk0pYAybUsAYNqWAMWxKAWPYbE+vdzbt5JufAAAAAElFTkSuQmCC",
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADMAAAAkCAYAAAAkcgIJAAAAd0lEQVR4nO3SwQnAMAxD0WzZUTprp2l6Dbkobqhs+gU+BYSfSWtCrvO4M8zyopUw0zsYMAZM5QlhnqMMs+nqrzvTfqnQ8mCSzL8wmYGh5cGAAQMGDBgwYMDUway+f9UpBYyhUwoYQ6cUMIZOKWAMnVLAGDqlVMF0ex9vMqMOdcYAAAAASUVORK5CYII=",
 ];

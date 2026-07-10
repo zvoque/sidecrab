@@ -20,9 +20,10 @@ export const SPRITES = {
     loop: false,
     steps: [ { i: 5, ms: 260 }, { i: 6, ms: 260 }, { i: 5, ms: 260 }, { i: 0, ms: 120 } ],
   },
+  // Morning stretch: rises on extended legs, arms up-out, eyes shut (frames 22/23).
   stretch: {
     loop: false,
-    steps: [ { i: 12, ms: 420 }, { i: 13, ms: 420 }, { i: 12, ms: 300 }, { i: 0, ms: 120 } ],
+    steps: [ { i: 22, ms: 260 }, { i: 23, ms: 850 }, { i: 22, ms: 220 }, { i: 0, ms: 140 } ],
   },
   peek: {
     loop: false,
@@ -43,6 +44,33 @@ export const SPRITES = {
   busy: { loop: true, steps: [ { i: 6, ms: 110 }, { i: 16, ms: 110 } ] },
   // Hovered: crouch down (legs sink into the ground) and squint contentedly.
   hover: { loop: true, steps: [{ i: 0, ms: 60000, dy: 3, squint: true }] },
+  // Asleep: eyes shut, gentle Z's drifting up (long-idle state).
+  sleep: {
+    loop: true,
+    steps: [
+      { i: 0, ms: 900, blink: true, dy: 2, zzz: 0 },
+      { i: 0, ms: 900, blink: true, dy: 2, zzz: 1 },
+    ],
+  },
+  // Glance around: the pupils actually move (micro-idle).
+  look: {
+    loop: false,
+    steps: [
+      { i: 0, ms: 550, eyesDx: -2 },
+      { i: 0, ms: 200 },
+      { i: 0, ms: 550, eyesDx: 2 },
+      { i: 0, ms: 150 },
+    ],
+  },
+  // Wave: raised claw with open pincer, wiggling (frames 20/21).
+  wave: {
+    loop: false,
+    steps: [
+      { i: 20, ms: 180 }, { i: 21, ms: 180 },
+      { i: 20, ms: 180 }, { i: 21, ms: 180 },
+      { i: 20, ms: 200 }, { i: 0, ms: 120 },
+    ],
+  },
   // Awaiting permission: still, urgent "!" bubble pulsing.
   alert: { loop: true, steps: [ { i: 0, ms: 550, bubble: true }, { i: 0, ms: 350 } ] },
   // Done: happy double hop.
@@ -195,12 +223,43 @@ export class SpriteRenderer {
         ctx.fillRect(p.x, p.y + y, 1, 1);
       }
     }
+    if (s.eyesDx) {
+      // Glance: erase the pupils, redraw them shifted (real eye movement).
+      if (!this._eyeMask) this._eyeMask = this._computeEyeMask();
+      for (const p of this._eyeMask || []) {
+        ctx.fillStyle = p.fill;
+        ctx.fillRect(p.x, p.y + y, 1, 1);
+      }
+      ctx.fillStyle = "#000";
+      for (const p of this._eyeMask || []) {
+        ctx.fillRect(p.x + s.eyesDx, p.y + y, 1, 1);
+      }
+    }
     ctx.restore();
+    if (s.zzz !== undefined) this._drawZzz(s.zzz);
     if (s.bubble) {
       // "!" above the crab, upper-right; drawn unflipped so it always reads.
       ctx.fillStyle = BUBBLE;
       ctx.fillRect(CANVAS_W - 12, 0, 3, 7);
       ctx.fillRect(CANVAS_W - 12, 9, 3, 3);
+    }
+  }
+
+  /// Sleep Z's drifting up-right of the head; `phase` alternates the drift.
+  _drawZzz(phase) {
+    const ctx = this.ctx;
+    ctx.fillStyle = BUBBLE;
+    const drawZ = (x, y, s) => {
+      ctx.fillRect(x, y, s, 1);             // top bar
+      for (let k = 0; k < s - 2; k++) ctx.fillRect(x + s - 2 - k, y + 1 + k, 1, 1); // diagonal
+      ctx.fillRect(x, y + s - 1, s, 1);     // bottom bar
+    };
+    if (phase === 0) {
+      drawZ(40, 6, 4);
+      drawZ(45, 1, 5);
+    } else {
+      drawZ(41, 4, 4);
+      drawZ(46, 0, 5);
     }
   }
 

@@ -6,9 +6,10 @@
 const RUN_TOOLS = new Set(["Bash"]);
 const DONE_MS = 1500; // celebrate length before settling back to rest
 
-const MICRO = ["blink", "blink", "blink", "shuffle", "stretch", "peek"]; // blink-weighted
+const MICRO = ["blink", "blink", "blink", "look", "look", "shuffle", "stretch", "peek", "wave"]; // blink/look-weighted, wave rare
 const MICRO_MIN_MS = 3000;
 const MICRO_MAX_MS = 9000;
+const SLEEP_AFTER_MS = 90_000; // continuous idle before nodding off
 
 export class StateMachine {
   constructor(renderer) {
@@ -28,6 +29,13 @@ export class StateMachine {
     const delay = MICRO_MIN_MS + Math.random() * (MICRO_MAX_MS - MICRO_MIN_MS);
     this._micro = setTimeout(() => {
       if (this.state !== "idle" || this._microPaused) return;
+      // Long uninterrupted idle → fall asleep (loops until anything wakes him).
+      if (Date.now() - (this._idleSince || 0) > SLEEP_AFTER_MS) {
+        this._micro = -1;
+        this._sleeping = true;
+        this.r.play("sleep");
+        return;
+      }
       this._micro = -1; // sentinel: one-shot in flight, keep the repeat-idle guard on
       const anim = MICRO[Math.floor(Math.random() * MICRO.length)];
       this.r.play(anim, () => this._scheduleMicro()); // one-shot, then re-arm
@@ -50,14 +58,16 @@ export class StateMachine {
 
   apply({ state, tool } = {}) {
     const next = state || "idle";
-    // Repeat idle events (hook chatter) must not reset the micro-life timer
-    // (or cancel an active hover), or the crab never gets around to blinking.
-    if (next === "idle" && this.state === "idle" && (this._micro || this._hovering)) {
+    // Repeat idle events (hook chatter) must not reset the micro-life timer,
+    // cancel an active hover, or wake a sleeping crab.
+    if (next === "idle" && this.state === "idle" && (this._micro || this._hovering || this._sleeping)) {
       if (this._hovering) this.r.play("hover"); // e.g. came home hovered mid-walk-anim
       return;
     }
     clearTimeout(this._decay);
     this._stopMicro();
+    if (next !== "idle" || this.state !== "idle") this._idleSince = Date.now();
+    this._sleeping = false; // any real event wakes him
     this.state = next;
     this._lastTool = tool;
     // done still decays to idle even while hover has hijacked the visuals.
@@ -109,6 +119,8 @@ export class StateMachine {
     this._hovering = on;
     if (on) {
       this._stopMicro();
+      this._sleeping = false; // a looming cursor wakes him
+      this._idleSince = Date.now();
       this.r.play("hover");
     } else if (this._traveling) {
       // walkTo reclaims the walk animation on its next tick
@@ -121,6 +133,8 @@ export class StateMachine {
   pet() {
     const prev = { state: this.state, tool: this._lastTool };
     this._stopMicro();
+    this._sleeping = false;
+    this._idleSince = Date.now();
     this.r.play("celebrate");
     clearTimeout(this._decay);
     this._decay = setTimeout(() => this.apply(prev), 700);
