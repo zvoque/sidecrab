@@ -9,54 +9,38 @@ use std::sync::Mutex;
 use tauri::menu::{CheckMenuItemBuilder, MenuBuilder, MenuItemBuilder, SubmenuBuilder};
 use tauri::{AppHandle, Emitter, Manager, WebviewWindow};
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
-use tauri_plugin_updater::UpdaterExt;
 
-/// Check GitHub releases; on confirmation download, install over the old app,
-/// and relaunch. Silent about errors beyond a dialog — never blocks the pet.
+/// Brew-first update check: compare the newest GitHub tag against this build
+/// and point the user at `brew upgrade` (no in-app installer).
 fn check_for_updates(app: AppHandle) {
     tauri::async_runtime::spawn(async move {
-        let updater = match app.updater() {
-            Ok(u) => u,
-            Err(_) => return,
-        };
-        match updater.check().await {
-            Ok(Some(update)) => {
-                let version = update.version.clone();
-                let handle = app.clone();
+        let current = app.package_info().version.to_string();
+        let latest = std::process::Command::new("curl")
+            .args(["-s", "--max-time", "10", "https://api.github.com/repos/zvoque/sidecrab/tags"])
+            .output()
+            .ok()
+            .and_then(|o| serde_json::from_slice::<serde_json::Value>(&o.stdout).ok())
+            .and_then(|v| v[0]["name"].as_str().map(|s| s.trim_start_matches('v').to_string()));
+        match latest {
+            Some(l) if l != current => {
                 app.dialog()
                     .message(format!(
-                        "Version {version} is available (you have {}).\n\nDownload and install now?",
-                        handle.package_info().version
+                        "Version {l} is available (you have {current}).\n\nUpdate with:\n  brew upgrade sidecrab"
                     ))
                     .title("Update available")
-                    .buttons(MessageDialogButtons::OkCancelCustom("Update".into(), "Later".into()))
-                    .show(move |yes| {
-                        if !yes {
-                            return;
-                        }
-                        tauri::async_runtime::spawn(async move {
-                            if update.download_and_install(|_, _| {}, || {}).await.is_ok() {
-                                handle.restart();
-                            } else {
-                                handle
-                                    .dialog()
-                                    .message("Update failed to install. Grab it manually from GitHub releases.")
-                                    .title("Update error")
-                                    .show(|_| {});
-                            }
-                        });
-                    });
+                    .buttons(MessageDialogButtons::Ok)
+                    .show(|_| {});
             }
-            Ok(None) => {
+            Some(_) => {
                 app.dialog()
                     .message("You're on the latest version.")
                     .title("No updates")
                     .show(|_| {});
             }
-            Err(e) => {
+            None => {
                 app.dialog()
-                    .message(format!("Update check failed: {e}"))
-                    .title("Update error")
+                    .message("Couldn't reach GitHub to check. Try `brew upgrade sidecrab`.")
+                    .title("Update check failed")
                     .show(|_| {});
             }
         }
@@ -343,7 +327,6 @@ pub fn run() {
         ))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(OpaqueRect(Mutex::new((0.0, 0.0, 1.0, 1.0))))
         .manage(DragLock(Mutex::new(false)))
         .invoke_handler(tauri::generate_handler![

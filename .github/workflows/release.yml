@@ -1,10 +1,5 @@
-# Release pipeline: push a tag like v0.2.0 → build the macOS app (universal),
-# sign updater artifacts, and publish a GitHub release with latest.json for the
-# in-app auto-updater.
-#
-# Required repo secrets:
-#   TAURI_SIGNING_PRIVATE_KEY          — contents of ~/.tauri/sidecrab.key
-#   TAURI_SIGNING_PRIVATE_KEY_PASSWORD — empty string (key generated without one)
+# Brew (source build from the tag tarball) is the install channel; this workflow
+# just proves the tag builds and parks a DMG in a draft release.
 # Optional (Apple notarization, when a Developer ID exists):
 #   APPLE_CERTIFICATE, APPLE_CERTIFICATE_PASSWORD, APPLE_SIGNING_IDENTITY,
 #   APPLE_ID, APPLE_PASSWORD, APPLE_TEAM_ID
@@ -47,8 +42,6 @@ jobs:
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           # Apple notarization: when a Developer ID exists, re-add these env vars
           # (empty values break tauri-action's keychain import):
           #   APPLE_CERTIFICATE, APPLE_CERTIFICATE_PASSWORD, APPLE_SIGNING_IDENTITY,
@@ -58,4 +51,3 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: "v__VERSION__"
           releaseDraft: true
-          includeUpdaterJson: true
