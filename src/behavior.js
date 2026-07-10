@@ -18,6 +18,13 @@ export function attachBehavior({ renderer, sm }) {
   const { invoke } = window.__TAURI__.core;
   const { listen } = window.__TAURI__.event;
 
+  // Awaited IPC with a timeout. The native context menu runs a nested run loop on
+  // the main thread and can drop an invoke response — a bare await then hangs
+  // forever and wedges the driver (crab stranded, ticker dead). Bounded await
+  // means the loops always re-check their conditions and recover.
+  const call = (cmd, args) =>
+    Promise.race([invoke(cmd, args), sleep(2000).then(() => null)]);
+
   let enabled = false;
   let mode = "off"; // off | wander | home
   let driving = false;
@@ -25,11 +32,14 @@ export function attachBehavior({ renderer, sm }) {
   let home = null; // {x, y} stable resting position
 
   // Capture the startup spot as home until a drag defines one.
-  invoke("get_geometry").then((g) => {
+  call("get_geometry").then((g) => {
     if (g && !home) home = { x: g.winX, y: g.winY };
   });
-  invoke("get_config").then((c) => (enabled = c.wanderEnabled));
-  listen("wander-changed", (e) => (enabled = !!e.payload));
+  call("get_config").then((c) => c && (enabled = c.wanderEnabled));
+  listen("wander-changed", (e) => {
+    enabled = !!e.payload;
+    if (!enabled && mode === "wander") mode = "home"; // toggled off mid-excursion
+  });
   listen("crab-hover", (e) => (hovering = !!e.payload));
   listen("user-active", () => {
     if (mode === "wander") mode = "home";
@@ -39,9 +49,9 @@ export function attachBehavior({ renderer, sm }) {
   // the persisted (dragged) position, and walks a stranded crab back home.
   setInterval(async () => {
     if (driving || sm.current() !== "idle" || hovering) return;
-    const c = await invoke("get_config");
-    if (c.position) home = { x: c.position[0], y: c.position[1] };
-    const g = await invoke("get_geometry");
+    const c = await call("get_config");
+    if (c?.position) home = { x: c.position[0], y: c.position[1] };
+    const g = await call("get_geometry");
     if (!g) return;
     if (!home) home = { x: g.winX, y: g.winY };
     if (Math.hypot(g.winX - home.x, g.winY - home.y) > HOME_EPS) {
@@ -49,7 +59,7 @@ export function attachBehavior({ renderer, sm }) {
       drive();
       return;
     }
-    if (enabled && mode === "off" && (await invoke("user_is_idle"))) {
+    if (enabled && mode === "off" && (await call("user_is_idle")) === true) {
       mode = "wander";
       drive();
     }
@@ -65,7 +75,7 @@ export function attachBehavior({ renderer, sm }) {
   /// otherwise the walk claims the animation immediately and moves. Arrival
   /// snaps to the exact target so "home" is pixel-accurate.
   async function walkTo(tx, ty, speed, live) {
-    const g = await invoke("get_geometry");
+    const g = await call("get_geometry");
     if (!g) return;
     let { winX: x, winY: y } = g;
     while (live()) {
@@ -95,7 +105,7 @@ export function attachBehavior({ renderer, sm }) {
     sm.pauseIdleLife();
 
     while (mode === "wander") {
-      const g = await invoke("get_geometry");
+      const g = await call("get_geometry");
       if (!g) break;
       const tx = g.monX + Math.random() * Math.max(1, g.monW - g.winW);
       const ty = g.monY + Math.random() * Math.max(1, g.monH - g.winH);
