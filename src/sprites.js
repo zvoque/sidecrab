@@ -37,11 +37,15 @@ export const SPRITES = {
   },
   // Thinking: slow pensive shuffle.
   think: { loop: true, steps: [ { i: 4, ms: 500 }, { i: 5, ms: 500 }, { i: 4, ms: 500 }, { i: 0, ms: 700 } ] },
-  // Editing: quick fidget, like tapping away.
-  type: { loop: true, steps: [ { i: 5, ms: 130 }, { i: 7, ms: 130 } ] },
-  // Running a command: busy in-place scurry — deliberately NOT the walk cycle,
-  // so stationary work never reads as confused walking.
-  busy: { loop: true, steps: [ { i: 6, ms: 110 }, { i: 16, ms: 110 } ] },
+  // Working (any tool): side profile at his laptop, claw tapping, screen flicker.
+  work: { loop: true, steps: [ { i: 24, ms: 260 }, { i: 25, ms: 260 } ] },
+  // Panic: full-tilt scramble — used while being carried (drag) and cursor-chasing.
+  panic: {
+    loop: true,
+    steps: Array.from({ length: 15 }, (_, k) => ({ i: k + 5, ms: 45 })),
+  },
+  // Mad glare: narrowed eyes, dead still (pre/post cursor-chase).
+  glare: { loop: true, steps: [{ i: 0, ms: 60000, squint: true }] },
   // Hovered: crouch down (legs sink into the ground) and squint contentedly.
   hover: { loop: true, steps: [{ i: 0, ms: 60000, dy: 3, squint: true }] },
   // Asleep: eyes shut, gentle Z's drifting up (long-idle state).

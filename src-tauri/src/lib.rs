@@ -225,6 +225,7 @@ pub fn run() {
             show_menu,
             os_actions::set_window_pos,
             os_actions::get_geometry,
+            os_actions::cursor_pos,
             os_actions::persist_position,
             os_actions::activate_host,
             os_actions::resize_window,

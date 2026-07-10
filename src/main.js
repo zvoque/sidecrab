@@ -24,7 +24,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       behavior.onClaudeState(e.payload); // wander preemption before the anim swap
       sm.apply(e.payload);
     });
-    await listen("crab-hover", (e) => sm.setHover(e.payload));
+    // crab-hover is consumed by behavior.js (forwarding + harassment detection)
   } else {
     // Browser-only dev cycler for eyeballing animations.
     const DEV = [

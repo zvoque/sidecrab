@@ -29,6 +29,8 @@ export function attachBehavior({ renderer, sm }) {
   let mode = "off"; // off | wander | home
   let driving = false;
   let hovering = false;
+  let chasing = false;
+  let hoverHits = []; // recent hover timestamps — harassment detector
   let home = null; // {x, y} stable resting position
 
   // Capture the startup spot as home until a drag defines one.
@@ -40,17 +42,73 @@ export function attachBehavior({ renderer, sm }) {
     enabled = !!e.payload;
     if (!enabled && mode === "wander") mode = "home"; // toggled off mid-excursion
   });
-  listen("crab-hover", (e) => (hovering = !!e.payload));
+  // Behavior owns the hover signal: forwards to the state machine, and counts
+  // pokes — hover him too often while he's idling and he snaps.
+  listen("crab-hover", (e) => {
+    hovering = !!e.payload;
+    if (chasing) return; // no crouching mid-chase — he's coming for the cursor
+    sm.setHover(hovering);
+    if (hovering && !driving && sm.current() === "idle") {
+      const now = Date.now();
+      hoverHits = hoverHits.filter((t) => now - t < 30000);
+      hoverHits.push(now);
+      if (hoverHits.length >= 4) {
+        hoverHits = [];
+        mad();
+      }
+    }
+  });
   listen("user-active", () => {
     if (mode === "wander") mode = "home";
   });
+
+  /// Harassment response: glare (narrow eyes), chase the cursor for a few
+  /// seconds at full scramble, glare again, then cool off. The homing ticker
+  /// walks him back afterwards.
+  async function mad() {
+    if (driving || chasing) return;
+    chasing = true;
+    sm.setHover(false);
+    sm.pauseIdleLife();
+    sm.setTraveling(true);
+    renderer.play("glare");
+    await sleep(650);
+    const g = await call("get_geometry");
+    let x = g?.winX ?? 0;
+    let y = g?.winY ?? 0;
+    const [w, hgt] = [g?.winW ?? 300, g?.winH ?? 280];
+    renderer.play("panic");
+    const until = Date.now() + 4000;
+    while (Date.now() < until) {
+      const cur = await call("cursor_pos");
+      if (cur) {
+        const tx = cur[0] - w / 2;
+        const ty = cur[1] - hgt / 2;
+        if (Math.hypot(tx - x, ty - y) > 8) {
+          renderer.setFacing(tx < x ? "left" : "right");
+          const ang = Math.atan2(ty - y, tx - x);
+          x += Math.cos(ang) * 6;
+          y += Math.sin(ang) * 6;
+          invoke("set_window_pos", { x: Math.round(x), y: Math.round(y) });
+        }
+      }
+      await sleep(30);
+    }
+    renderer.play("glare");
+    await sleep(500);
+    chasing = false;
+    renderer.setFacing("right");
+    sm.setTraveling(false);
+    sm.resumeIdleLife();
+    sm.apply({ state: sm.current(), tool: sm._lastTool });
+  }
 
   // Ticker replaces one-shot events: re-checks wander eligibility, syncs home with
   // the persisted (dragged) position, and walks a stranded crab back home.
   // Homing does NOT wait for Claude to go idle — during an active session the
   // crab is almost never state-idle, and a stranded crab must still come home.
   setInterval(async () => {
-    if (driving || hovering) return;
+    if (driving || hovering || chasing) return;
     const c = await call("get_config");
     if (c?.position) home = { x: c.position[0], y: c.position[1] };
     const g = await call("get_geometry");

@@ -1,6 +1,5 @@
-// Clawd frames: 0-19 official walk cycle (extracted via CSB, quantized to the
-// flat palette), 20-21 authored wave (raised claw + open pincer), 22-23 authored
-// stretch (body up on extended legs, arms up-out). 51x36 RGBA.
+// Clawd frames: 0-19 official walk cycle (extracted via CSB, quantized flat),
+// 20-21 wave, 22-23 stretch, 24-25 side-profile laptop typing (authored).
 // Frames 0-19 derive from Anthropic IP — personal use only. See README.
 export const FRAME_W = 51;
 export const FRAME_H = 36;
@@ -29,4 +28,6 @@ export const WALK_PNGS = [
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADMAAAAkCAYAAAAkcgIJAAAAfklEQVR4nO3TOw6AIBCEYW7pUTyrp/FRWFgQdgNhFvefZBowE77CUogux76dT1tnS6Qb836sLpgVMLX73Jj76NNBD21uVt7iCxgwnZgRD5lVMFH7O4zr545cMFGbC2OJGgEGDBgwYHJhvPezNk0BI9g0BYxg0xQwgk1TwAg2L7U6EpIxnUZTAAAAAElFTkSuQmCC",
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADMAAAAkCAYAAAAkcgIJAAAAb0lEQVR4nO3VwQ2AIABDUbZkFGd1GvHqyUqEFv1NeoGk4R2Mpfwt+1aPhIIBsyrmPLr0pYfeboIBk4AZ/dHOLJjUgkktmNR+C9Pz04x+LBgwYMCAWR7z9H7WphQwhk0pYAybUsAYNqWAMWxKAWPYbE+vdzbt5JufAAAAAElFTkSuQmCC",
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADMAAAAkCAYAAAAkcgIJAAAAd0lEQVR4nO3SwQnAMAxD0WzZUTprp2l6Dbkobqhs+gU+BYSfSWtCrvO4M8zyopUw0zsYMAZM5QlhnqMMs+nqrzvTfqnQ8mCSzL8wmYGh5cGAAQMGDBgwYMDUway+f9UpBYyhUwoYQ6cUMIZOKWAMnVLAGDqlVMF0ex9vMqMOdcYAAAAASUVORK5CYII=",
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADMAAAAkCAYAAAAkcgIJAAAAfUlEQVR4nO3Uuw2AMAwA0QyFKJkCCQZgB2bNNIEypMD5G4U7yUXkxq+JMUREFJE9N1d7wID5C+Z+PgZMCWaaF+fPMJh1P8B85gMAAwYMmGhMi+PB5GB6HK+G6YGthkkZMC0xfkNhSno7KHenFhhhpxYYYacWGGGnFhhhF3YBEpNwr3GI2DYAAAAASUVORK5CYII=",
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADMAAAAkCAYAAAAkcgIJAAAAgUlEQVR4nO3UsQ2AMAwAwQyFKJkCCQZgBzZhCCZhBaYJlJACQ4IxSv4lF5EbXxPniIjoRuvY+bcHDJhSMPvzNGBSMFXd+ONkg5nmBcxvPgAwYMCAKROjcTyYGMwXx6tg2n54NFpYMGFZYVK6Oih2ZxYYYWcWGGFnFhhhZxYYYRe2AYqLcL+MzcUnAAAAAElFTkSuQmCC",
 ];

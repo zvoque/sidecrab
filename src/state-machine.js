@@ -3,7 +3,6 @@
 // stretches or peeks — no constant bobbing.
 // Feed contract (state.json): { state: idle|thinking|tool|permission|done, tool?: string }
 
-const RUN_TOOLS = new Set(["Bash"]);
 const DONE_MS = 1500; // celebrate length before settling back to rest
 
 const MICRO = ["blink", "blink", "blink", "look", "look", "shuffle", "stretch", "peek", "wave"]; // blink/look-weighted, wave rare
@@ -84,9 +83,8 @@ export class StateMachine {
         this.r.play("think");
         break;
       case "tool":
-        // Bash gets the in-place busy scurry (the walk cycle is reserved for
-        // actual travel); edit-ish tools fidget-type.
-        this.r.play(RUN_TOOLS.has(tool) ? "busy" : "type");
+        // Any tool: he sits at his laptop and types.
+        this.r.play("work");
         break;
       case "permission":
         this.r.play("alert");

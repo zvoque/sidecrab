@@ -69,6 +69,12 @@ pub fn set_window_pos(window: WebviewWindow, x: i32, y: i32) {
     let _ = window.set_position(tauri::PhysicalPosition::new(x, y));
 }
 
+/// Global cursor position (physical px) — the mad-chase target.
+#[tauri::command]
+pub fn cursor_pos(app: AppHandle) -> Option<(f64, f64)> {
+    app.cursor_position().ok().map(|p| (p.x, p.y))
+}
+
 /// Window + current-monitor rects in physical px, for wander pathing bounds.
 #[tauri::command]
 pub fn get_geometry(window: WebviewWindow) -> Option<serde_json::Value> {
