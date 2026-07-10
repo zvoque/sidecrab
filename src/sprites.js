@@ -6,11 +6,11 @@
 
 export const PALETTE = [
   "transparent", // 0 .
-  "#2a1608",     // 1 o  outline / legs
-  "#d9772e",     // 2 B  shell body (warm orange)
-  "#b25f22",     // 3 s  shell shadow
-  "#eca05a",     // 4 h  highlight
-  "#140d05",     // 5 e  eye
+  "#8a4a38",     // 1 o  dark accent (rarely used; flat style)
+  "#c97666",     // 2 B  body (Clawd terracotta)
+  "#b06052",     // 3 s  body shadow
+  "#db8a76",     // 4 h  highlight
+  "#26150f",     // 5 e  eye
 ];
 
 const CHARS = { ".": 0, o: 1, B: 2, s: 3, h: 4, e: 5 };
@@ -31,7 +31,8 @@ function compile(rows) {
 }
 
 // ── Rest pose ────────────────────────────────────────────────────────────────
-// A stout round-shelled crab facing the viewer: two eyes, two raised claws, legs.
+// Boxy flat-top crab (Clawd-style): stepped cap, wide-set square eyes, square claw
+// nubs on the sides, three stubby legs with gaps. Flat color, no outline.
 const REST = [
   "................................",
   "................................",
@@ -39,25 +40,25 @@ const REST = [
   "................................",
   "................................",
   "................................",
-  ".............oooooo.............",
-  "...........oBBBBBBBBo...........",
-  "..........oBBBBBBBBBBo..........",
-  ".........oBBBBBBBBBBBBo.........",
-  ".........oBBBBBBBBBBBBo.........",
-  "........oBBBeeBBBBeeBBBo........",
-  "........oBBBeeBBBBeeBBBo........",
-  "..oooo..oBBBBBBBBBBBBBBo..oooo..",
-  ".oBBBBo.oBBBBBBBBBBBBBBo.oBBBBo.",
-  ".oBBBBBBoBBBBBBBBBBBBBBoBBBBBBo.",
-  ".oBBBBBBoBBBBBBBBBBBBBBoBBBBBBo.",
-  "...oo...oBBBBBBBBBBBBBBo...oo...",
-  "........oBBBBBBBBBBBBBBo........",
-  ".........oBBBBBBBBBBBBo.........",
-  "..........oBBBBBBBBBBo..........",
-  "...........oBBBBBBBBo...........",
-  "............oooooooo............",
-  "...........o..o..o..o...........",
   "................................",
+  "................................",
+  "................................",
+  "................................",
+  "..........BBBBBBBBBBBB..........",
+  "..........BBBBBBBBBBBB..........",
+  "........BBeeBBBBBBBBeeBB........",
+  "........BBeeBBBBBBBBeeBB........",
+  "....BBBBBBBBBBBBBBBBBBBBBBBB....",
+  "....BBBBBBBBBBBBBBBBBBBBBBBB....",
+  "....BBBBBBBBBBBBBBBBBBBBBBBB....",
+  "....BBBBBBBBBBBBBBBBBBBBBBBB....",
+  "........BBBBBBBBBBBBBBBB........",
+  "........BBBBBBBBBBBBBBBB........",
+  "........BBBBBBBBBBBBBBBB........",
+  "........ssBBBBBBBBBBBBss........",
+  "..........BB...BB...BB..........",
+  "..........BB...BB...BB..........",
+  "..........BB...BB...BB..........",
   "................................",
   "................................",
   "................................",
@@ -67,8 +68,8 @@ const REST = [
   "................................",
 ];
 
-// Blink: eyes closed — collapse the two eye rows to a single dark line.
-const REST_BLINK = REST.map((r, y) => (y === 11 ? r.replace(/e/g, "B") : r));
+// Blink: eyes closed — top eye row becomes body, bottom row stays a thin dark line.
+const REST_BLINK = REST.map((r, y) => (y === 12 ? r.replace(/e/g, "B") : r));
 
 export const SPRITES = {
   rest: {
