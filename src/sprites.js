@@ -1,5 +1,6 @@
 // Clawd renderer: draws the official 20-frame walk cycle (frames.js) on a canvas.
-// Anim = a sequence of {i: frameIndex, ms, dy?, blink?, bubble?} steps. Facing flips
+// Anim = a sequence of {i: frameIndex, ms, dy?, blink?, squint?, halfEyes?,
+// eyesDx?, zzz?, mark?} steps. Facing flips
 // horizontally. No ambient bobbing — idle is still; micro-life comes from the idle
 // scheduler in state-machine.js picking occasional one-shot anims.
 import { FRAME_W, FRAME_H, WALK_PNGS } from "./frames.js";
@@ -74,7 +75,7 @@ export const SPRITES = {
   // over his head.
   chase: {
     loop: true,
-    steps: Array.from({ length: 15 }, (_, k) => ({ i: k + 5, ms: 45, halfEyes: true, bubble: true })),
+    steps: Array.from({ length: 15 }, (_, k) => ({ i: k + 5, ms: 45, halfEyes: true, mark: "!" })),
   },
   // Hovered: crouch down (legs sink into the ground) and squint contentedly.
   hover: { loop: true, steps: [{ i: 0, ms: 60000, dy: 3, squint: true }] },
@@ -105,8 +106,11 @@ export const SPRITES = {
       { i: 20, ms: 200 }, { i: 0, ms: 120 },
     ],
   },
-  // Awaiting permission: still, urgent "!" bubble pulsing.
-  alert: { loop: true, steps: [ { i: 0, ms: 550, bubble: true }, { i: 0, ms: 350 } ] },
+  // Awaiting permission: both claws up, waving urgently, "!?" overhead.
+  alert: {
+    loop: true,
+    steps: [ { i: 27, ms: 220, mark: "!?" }, { i: 28, ms: 220, mark: "!?" } ],
+  },
   // Done: happy double hop.
   celebrate: {
     loop: true,
@@ -414,19 +418,33 @@ export class SpriteRenderer {
     }
     ctx.restore();
     if (s.zzz !== undefined) this._drawZzz(s.zzz);
-    if (this._thought) this._drawThought(s.i, Math.floor(this._t / 450) % 4, y);
-    if (s.bubble) {
-      // "!" floating above his head (unflipped so it always reads; mirror the
-      // anchor when the crab is flipped).
+    // No pondering while scrambling: panic/chase suppress the thought bubble.
+    if (this._thought && this.anim !== "panic" && this.anim !== "chase") {
+      this._drawThought(s.i, Math.floor(this._t / 450) % 4, y);
+    }
+    if (s.mark) {
+      // "!" or "!?" floating above his head (unflipped so it always reads;
+      // mirror the anchor when the crab is flipped).
       const a = this._headAnchor(s.i);
       if (a) {
         const cx = this.facing === -1 ? CANVAS_W - a.cx : a.cx;
         const hatH = this.hat ? HATS[this.hat === "heli" ? "heli0" : this.hat].length - 1 : 0;
         const top = y + a.top - hatH; // clear the hat if he's wearing one
-        const bx = Math.round(cx) - 1;
+        const two = s.mark === "!?";
+        const bx = Math.round(cx) - (two ? 4 : 1);
         ctx.fillStyle = BUBBLE;
+        // "!"
         ctx.fillRect(bx, Math.max(0, top - 11), 3, 6);
         ctx.fillRect(bx, Math.max(0, top - 3), 3, 2);
+        if (two) {
+          // "?" — hook, stem, dot
+          const qx = bx + 5;
+          const qy = Math.max(0, top - 11);
+          ctx.fillRect(qx, qy, 4, 2);          // top bar
+          ctx.fillRect(qx + 3, qy + 2, 2, 2);  // right side
+          ctx.fillRect(qx + 1, qy + 4, 2, 2);  // hook to center
+          ctx.fillRect(qx + 1, Math.max(0, top - 3), 2, 2); // dot
+        }
       }
     }
   }
