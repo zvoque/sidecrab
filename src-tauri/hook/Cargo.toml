@@ -1,0 +1,12 @@
+[package]
+name = "clawd-pet-hook"
+version = "0.1.0"
+edition = "2021"
+
+# Standalone on purpose: no tauri deps, so it builds in seconds and breaks the
+# externalBin chicken-and-egg (the app's build script validates the sidecar
+# exists — which this crate produces).
+
+[dependencies]
+serde_json = "1"
+dirs = "5"

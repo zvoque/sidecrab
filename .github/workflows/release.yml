@@ -32,8 +32,8 @@ jobs:
       - name: Build sidecar (universal)
         run: |
           cd src-tauri
-          cargo build --release --bin clawd-pet-hook --target aarch64-apple-darwin
-          cargo build --release --bin clawd-pet-hook --target x86_64-apple-darwin
+          cargo build --release -p clawd-pet-hook --target aarch64-apple-darwin
+          cargo build --release -p clawd-pet-hook --target x86_64-apple-darwin
           mkdir -p binaries
           lipo -create \
             target/aarch64-apple-darwin/release/clawd-pet-hook \

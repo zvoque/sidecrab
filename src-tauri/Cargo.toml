@@ -4,17 +4,15 @@ version = "0.1.0"
 description = "Desktop pet crab that reacts to Claude Code activity"
 authors = ["zvoque"]
 edition = "2021"
-default-run = "clawd-pet"
+
+# The hook sidecar lives in its own crate (hook/) so the app's tauri-build
+# externalBin validation can't deadlock on a binary this crate would produce.
+[workspace]
+members = ["hook"]
 
 [lib]
 name = "clawd_pet_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
-
-# Bundled hook handler — invoked by Claude Code hooks to write the state file.
-# No external runtime; ships inside the app bundle.
-[[bin]]
-name = "clawd-pet-hook"
-path = "src/bin/clawd_pet_hook.rs"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
