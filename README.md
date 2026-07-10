@@ -5,20 +5,18 @@ over your screen and reacts to what Claude Code is doing — thinking, running c
 editing, awaiting permission, done. Inspired by the Codex pet in the ChatGPT desktop app
 and the crab in [claude-status-bar](https://github.com/m1ckc3s/claude-status-bar).
 
-## What it does
+## What he does
 
 | | | |
 |:---:|:---:|:---:|
-| ![idle](docs/gifs/idle.gif) | ![working](docs/gifs/working.gif) | ![thinking](docs/gifs/thinking.gif) |
-| **idle** — blinks, stretches, waves | **working** — any tool, at his laptop | **thinking** — pondering with a thought bubble |
-| ![permission](docs/gifs/permission.gif) | ![walking](docs/gifs/walking.gif) | ![sleeping](docs/gifs/sleeping.gif) |
-| **needs permission** — flags you down | **wandering** — strolls when you're idle | **sleeping** — after a long quiet spell |
-| ![hover](docs/gifs/hover.gif) | ![celebrate](docs/gifs/celebrate.gif) | ![chase](docs/gifs/chase.gif) |
-| **hovered** — crouches and squints | **done** — happy hop (also when petted) | **harassed** — hover him too much and he chases your cursor |
+| ![working](docs/gifs/working.gif) | ![thinking](docs/gifs/thinking.gif) | ![permission](docs/gifs/permission.gif) |
+| **working** — any tool, at his laptop | **thinking** — pondering | **needs permission** — flags you down |
 
-Interactions: **drag** to reposition (persists) · **click** to pet · **double-click** to
-focus the app running the session (Claude Desktop or your terminal) · **right-click**
-for the menu (size S/M/L, wander toggle, hook management, quit).
+…plus a bunch more moods and moves he'll show you himself.
+
+Interactions: **drag** him anywhere (he remembers) · **double-click** to focus the app
+running the session · **right-click** for settings. He also reacts to a few other
+things — poke around.
 
 **Wander when idle** (off by default, right-click to enable): when *you* go idle for
 ~30s, the crab takes little walks around the screen and scurries home when you're back.

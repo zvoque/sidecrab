@@ -423,28 +423,19 @@ export class SpriteRenderer {
       this._drawThought(s.i, Math.floor(this._t / 450) % 4, y);
     }
     if (s.mark) {
-      // "!" or "!?" floating above his head (unflipped so it always reads;
-      // mirror the anchor when the crab is flipped).
-      const a = this._headAnchor(s.i);
-      if (a) {
-        const cx = this.facing === -1 ? CANVAS_W - a.cx : a.cx;
-        const hatH = this.hat ? HATS[this.hat === "heli" ? "heli0" : this.hat].length - 1 : 0;
-        const top = y + a.top - hatH; // clear the hat if he's wearing one
-        const two = s.mark === "!?";
-        const bx = Math.round(cx) - (two ? 4 : 1);
-        ctx.fillStyle = BUBBLE;
-        // "!"
-        ctx.fillRect(bx, Math.max(0, top - 11), 3, 6);
-        ctx.fillRect(bx, Math.max(0, top - 3), 3, 2);
-        if (two) {
-          // "?" — hook, stem, dot
-          const qx = bx + 5;
-          const qy = Math.max(0, top - 11);
-          ctx.fillRect(qx, qy, 4, 2);          // top bar
-          ctx.fillRect(qx + 3, qy + 2, 2, 2);  // right side
-          ctx.fillRect(qx + 1, qy + 4, 2, 2);  // hook to center
-          ctx.fillRect(qx + 1, Math.max(0, top - 3), 2, 2); // dot
-        }
+      // "!" or "!?" in the upper-right corner (same zone as the sleep Z's) —
+      // clears raised claws and any hat, always unflipped.
+      const two = s.mark === "!?";
+      const bx = two ? 39 : 44;
+      ctx.fillStyle = BUBBLE;
+      ctx.fillRect(bx, 1, 3, 6); // "!" bar
+      ctx.fillRect(bx, 9, 3, 2); // "!" dot
+      if (two) {
+        const qx = bx + 5;
+        ctx.fillRect(qx, 1, 4, 2);     // "?" top bar
+        ctx.fillRect(qx + 3, 3, 2, 2); // right side
+        ctx.fillRect(qx + 1, 5, 2, 2); // hook to center
+        ctx.fillRect(qx + 1, 9, 2, 2); // dot
       }
     }
   }
