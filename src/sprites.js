@@ -1,25 +1,26 @@
-// Hand-coded 8-bit crab sprite engine. Frames are authored as arrays of equal-length
-// strings (one char per pixel) and compiled to palette-index grids at load. This keeps
-// the art readable/editable inline instead of as opaque number matrices.
+// Hand-coded 8-bit crab sprite engine (Clawd-style: boxy flat-top body, wide-set
+// square eyes, square claw nubs, three stubby legs). Every animation frame is the
+// same parametric body in a different pose, produced by crab() — keeps frames
+// consistent and the art in one place.
 //
-// Char map:  . transparent   o outline/dark   B body   s shadow   h highlight   e eye
+// Palette chars: . transparent  o dark accent  B body  s shadow  h highlight  e eye  w bubble
 
 export const PALETTE = [
   "transparent", // 0 .
-  "#8a4a38",     // 1 o  dark accent (rarely used; flat style)
+  "#8a4a38",     // 1 o  dark accent
   "#c97666",     // 2 B  body (Clawd terracotta)
   "#b06052",     // 3 s  body shadow
   "#db8a76",     // 4 h  highlight
   "#26150f",     // 5 e  eye
+  "#f2e7dc",     // 6 w  speech-bubble "!"
 ];
 
-const CHARS = { ".": 0, o: 1, B: 2, s: 3, h: 4, e: 5 };
+const CHARS = { ".": 0, o: 1, B: 2, s: 3, h: 4, e: 5, w: 6 };
 
 const W = 32;
 const H = 32;
 
 function compile(rows) {
-  // Pad/validate to a W×H grid of palette indices.
   const grid = [];
   for (let y = 0; y < H; y++) {
     const line = rows[y] || "";
@@ -30,55 +31,88 @@ function compile(rows) {
   return grid;
 }
 
-// ── Rest pose ────────────────────────────────────────────────────────────────
-// Boxy flat-top crab (Clawd-style): stepped cap, wide-set square eyes, square claw
-// nubs on the sides, three stubby legs with gaps. Flat color, no outline.
-const REST = [
-  "................................",
-  "................................",
-  "................................",
-  "................................",
-  "................................",
-  "................................",
-  "................................",
-  "................................",
-  "................................",
-  "................................",
-  "..........BBBBBBBBBBBB..........",
-  "..........BBBBBBBBBBBB..........",
-  "........BBeeBBBBBBBBeeBB........",
-  "........BBeeBBBBBBBBeeBB........",
-  "....BBBBBBBBBBBBBBBBBBBBBBBB....",
-  "....BBBBBBBBBBBBBBBBBBBBBBBB....",
-  "....BBBBBBBBBBBBBBBBBBBBBBBB....",
-  "....BBBBBBBBBBBBBBBBBBBBBBBB....",
-  "........BBBBBBBBBBBBBBBB........",
-  "........BBBBBBBBBBBBBBBB........",
-  "........BBBBBBBBBBBBBBBB........",
-  "........ssBBBBBBBBBBBBss........",
-  "..........BB...BB...BB..........",
-  "..........BB...BB...BB..........",
-  "..........BB...BB...BB..........",
-  "................................",
-  "................................",
-  "................................",
-  "................................",
-  "................................",
-  "................................",
-  "................................",
-];
+// ── Parametric crab pose ─────────────────────────────────────────────────────
+// Geometry (rest): cap rows 10-11 cols 10-21 · body rows 12-21 cols 8-23 ·
+// eyes 2×2 at cols 10/20 · nubs 4×4 at cols 4/24 · legs 2-wide at cols 10/15/20.
+function crab(opts = {}) {
+  const {
+    dy = 0,          // whole-crab vertical offset (hop)
+    eyes = "open",   // open | closed | up
+    nubL = "side",   // side | mid | up   (claw nub height)
+    nubR = "side",
+    legs = "stand",  // stand | stepA | stepB (scurry phases)
+    legShift = 0,    // legs x offset while running
+    bubble = false,  // "!" attention bubble
+  } = opts;
 
-// Blink: eyes closed — top eye row becomes body, bottom row stays a thin dark line.
-const REST_BLINK = REST.map((r, y) => (y === 12 ? r.replace(/e/g, "B") : r));
+  const g = Array.from({ length: H }, () => Array(W).fill("."));
+  const rect = (x, y, w, h, c) => {
+    for (let yy = y + dy; yy < y + h + dy; yy++)
+      for (let xx = x; xx < x + w; xx++)
+        if (yy >= 0 && yy < H && xx >= 0 && xx < W) g[yy][xx] = c;
+  };
+
+  rect(10, 10, 12, 2, "B"); // cap
+  rect(8, 12, 16, 10, "B"); // body
+  rect(8, 21, 2, 1, "s");   // bottom corner shading
+  rect(22, 21, 2, 1, "s");
+
+  if (eyes === "closed") {
+    rect(10, 13, 2, 1, "e");
+    rect(20, 13, 2, 1, "e");
+  } else {
+    const ey = eyes === "up" ? 11 : 12;
+    rect(10, ey, 2, 2, "e");
+    rect(20, ey, 2, 2, "e");
+  }
+
+  const nubY = { side: 14, mid: 13, up: 11 };
+  rect(4, nubY[nubL], 4, 4, "B");
+  rect(24, nubY[nubR], 4, 4, "B");
+
+  [10, 15, 20].forEach((x, i) => {
+    const lifted =
+      legs === "stepA" ? i === 1 : legs === "stepB" ? i !== 1 : false;
+    rect(x + legShift, 22, 2, lifted ? 2 : 3, "B");
+  });
+
+  if (bubble) {
+    rect(25, 3, 2, 5, "w"); // "!" bar
+    rect(25, 9, 2, 2, "w"); // "!" dot
+  }
+
+  return g.map((r) => r.join(""));
+}
+
+const F = (opts, ms) => ({ cells: compile(crab(opts)), ms });
 
 export const SPRITES = {
-  rest: {
-    loop: true,
-    bob: true, // gentle vertical breathing applied by the renderer
+  // Idle: breathing bob + occasional blink.
+  rest: { bob: true, frames: [F({}, 3200), F({ eyes: "closed" }, 130)] },
+  // Thinking: eyes up, right claw taps.
+  think: {
+    bob: true,
+    frames: [F({ eyes: "up" }, 420), F({ eyes: "up", nubR: "mid" }, 420)],
+  },
+  // Running a command: legs scurry.
+  run: {
     frames: [
-      { cells: compile(REST), ms: 3200 },
-      { cells: compile(REST_BLINK), ms: 130 },
+      F({ legs: "stepA", legShift: -1 }, 140),
+      F({ legs: "stepB", legShift: 1 }, 140),
     ],
+  },
+  // Editing/writing: claws alternate like typing.
+  type: { frames: [F({ nubL: "mid" }, 110), F({ nubR: "mid" }, 110)] },
+  // Awaiting permission: claws up, "!" pulses.
+  alert: {
+    frames: [
+      F({ nubL: "up", nubR: "up", bubble: true }, 500),
+      F({ nubL: "up", nubR: "up" }, 350),
+    ],
+  },
+  // Done: happy hop.
+  celebrate: {
+    frames: [F({ dy: -2, nubL: "up", nubR: "up" }, 170), F({}, 170)],
   },
 };
 
@@ -89,7 +123,7 @@ export class SpriteRenderer {
     this.ctx.imageSmoothingEnabled = false;
     this.anim = "rest";
     this.frame = 0;
-    this.facing = 1; // 1 = right (natural), -1 = flipped
+    this.facing = 1; // 1 = right, -1 = flipped
     this._acc = 0;
     this._last = 0;
     this._t = 0;
@@ -120,8 +154,7 @@ export class SpriteRenderer {
     this._t += dt;
     const a = SPRITES[this.anim];
     this._acc += dt;
-    const cur = a.frames[this.frame];
-    if (this._acc >= cur.ms) {
+    if (this._acc >= a.frames[this.frame].ms) {
       this._acc = 0;
       this.frame = (this.frame + 1) % a.frames.length;
     }
@@ -132,7 +165,7 @@ export class SpriteRenderer {
   _draw(a) {
     const ctx = this.ctx;
     ctx.clearRect(0, 0, W, H);
-    const bob = a.bob ? Math.round(Math.sin(this._t / 900) * 1) : 0;
+    const bob = a.bob ? Math.round(Math.sin(this._t / 900)) : 0;
     const cells = a.frames[this.frame].cells;
     ctx.save();
     if (this.facing === -1) {
