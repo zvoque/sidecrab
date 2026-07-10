@@ -3,14 +3,20 @@
 use crate::config::{self, Config};
 use tauri::{AppHandle, Manager, WebviewWindow};
 
-const SIZES: [(&str, f64); 3] = [("S", 96.0), ("M", 128.0), ("L", 160.0)];
+// Window logical sizes per setting. Height keeps the sprite's 51:48 aspect so the
+// crab is never distorted.
+const SIZES: [(&str, f64, f64); 3] = [
+    ("S", 102.0, 96.0),
+    ("M", 153.0, 144.0),
+    ("L", 204.0, 192.0),
+];
 
-/// Move the window by a delta (manual drag — lets JS keep click/dblclick events).
-#[tauri::command]
-pub fn move_window_by(window: WebviewWindow, dx: i32, dy: i32) {
-    if let Ok(pos) = window.outer_position() {
-        let _ = window.set_position(tauri::PhysicalPosition::new(pos.x + dx, pos.y + dy));
-    }
+pub fn logical_size(size: &str) -> (f64, f64) {
+    SIZES
+        .iter()
+        .find(|(s, _, _)| *s == size)
+        .map(|&(_, w, h)| (w, h))
+        .unwrap_or((153.0, 144.0))
 }
 
 /// Absolute placement (wander walking / teleport home).
@@ -64,26 +70,25 @@ pub fn activate_host(host: String) {
 
 #[tauri::command]
 pub fn resize_window(window: WebviewWindow, size: String) {
-    let Some(&(_, px)) = SIZES.iter().find(|(s, _)| *s == size) else {
-        return;
-    };
-    // Anchor the bottom-right corner: set_size keeps the top-left origin, which
-    // makes smaller sizes drift up-left. Shift the origin by the size delta.
+    let (lw, lh) = logical_size(&size);
+    // Anchor the bottom-right corner. Compute the new physical size instead of
+    // querying outer_size() after set_size — the query returns the STALE size
+    // (resize applies asynchronously), which made S/L drift.
     let before = (window.outer_position().ok(), window.outer_size().ok());
-    let _ = window.set_size(tauri::LogicalSize::new(px, px));
+    let scale = window.scale_factor().unwrap_or(2.0);
+    let _ = window.set_size(tauri::LogicalSize::new(lw, lh));
     if let (Some(pos), Some(old)) = before {
-        if let Ok(new) = window.outer_size() {
-            let (dx, dy) = (
-                old.width as i32 - new.width as i32,
-                old.height as i32 - new.height as i32,
-            );
-            let _ = window.set_position(tauri::PhysicalPosition::new(pos.x + dx, pos.y + dy));
-            let mut c = config::load();
-            c.position = Some((pos.x + dx, pos.y + dy));
-            c.size = size;
-            let _ = config::save(&c);
-            return;
-        }
+        let (new_w, new_h) = ((lw * scale).round() as i32, (lh * scale).round() as i32);
+        let (x, y) = (
+            pos.x + old.width as i32 - new_w,
+            pos.y + old.height as i32 - new_h,
+        );
+        let _ = window.set_position(tauri::PhysicalPosition::new(x, y));
+        let mut c = config::load();
+        c.position = Some((x, y));
+        c.size = size;
+        let _ = config::save(&c);
+        return;
     }
     let mut c = config::load();
     c.size = size;
@@ -131,10 +136,3 @@ fn hook_bin_path(app: &AppHandle) -> Option<String> {
     Some(exe.parent()?.join("clawd-pet-hook").to_string_lossy().into_owned())
 }
 
-pub fn size_px(size: &str) -> f64 {
-    SIZES
-        .iter()
-        .find(|(s, _)| *s == size)
-        .map(|&(_, px)| px)
-        .unwrap_or(128.0)
-}

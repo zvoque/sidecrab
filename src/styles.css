@@ -20,10 +20,9 @@ body {
   justify-content: center;
 }
 
-/* Pixel art: scale the tiny logical canvas up with hard edges. */
+/* Pixel art: backing store matches physical pixels; keep hard edges regardless. */
 #crab {
   width: 100%;
   height: 100%;
   image-rendering: pixelated;
-  image-rendering: crisp-edges;
 }

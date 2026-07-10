@@ -7,8 +7,8 @@ const RUN_TOOLS = new Set(["Bash"]);
 const DONE_MS = 1500; // celebrate length before settling back to rest
 
 const MICRO = ["blink", "blink", "blink", "shuffle", "stretch", "peek"]; // blink-weighted
-const MICRO_MIN_MS = 4000;
-const MICRO_MAX_MS = 12000;
+const MICRO_MIN_MS = 3000;
+const MICRO_MAX_MS = 9000;
 
 export class StateMachine {
   constructor(renderer) {
@@ -28,6 +28,7 @@ export class StateMachine {
     const delay = MICRO_MIN_MS + Math.random() * (MICRO_MAX_MS - MICRO_MIN_MS);
     this._micro = setTimeout(() => {
       if (this.state !== "idle" || this._microPaused) return;
+      this._micro = -1; // sentinel: one-shot in flight, keep the repeat-idle guard on
       const anim = MICRO[Math.floor(Math.random() * MICRO.length)];
       this.r.play(anim, () => this._scheduleMicro()); // one-shot, then re-arm
     }, delay);
@@ -46,9 +47,13 @@ export class StateMachine {
   }
 
   apply({ state, tool } = {}) {
+    const next = state || "idle";
+    // Repeat idle events (hook chatter) must not reset the micro-life timer,
+    // or the crab never gets around to blinking during an active session.
+    if (next === "idle" && this.state === "idle" && this._micro) return;
     clearTimeout(this._decay);
     this._stopMicro();
-    this.state = state || "idle";
+    this.state = next;
     this._lastTool = tool;
     switch (this.state) {
       case "thinking":

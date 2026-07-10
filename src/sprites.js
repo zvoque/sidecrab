@@ -15,7 +15,7 @@ export const SPRITES = {
   // Idle: dead still on the neutral pose (micro-life is scheduled separately).
   rest: { loop: true, steps: [{ i: 0, ms: 60000 }] },
   // Micro-idle one-shots (scheduler picks one every so often):
-  blink: { loop: false, steps: [{ i: 0, ms: 120, blink: true }, { i: 0, ms: 90 }] },
+  blink: { loop: false, steps: [{ i: 0, ms: 160, blink: true }, { i: 0, ms: 120 }, { i: 0, ms: 140, blink: true }] },
   shuffle: {
     loop: false,
     steps: [ { i: 5, ms: 260 }, { i: 6, ms: 260 }, { i: 5, ms: 260 }, { i: 0, ms: 120 } ],
@@ -28,10 +28,11 @@ export const SPRITES = {
     loop: false,
     steps: [ { i: 8, ms: 500 }, { i: 0, ms: 150 }, { i: 16, ms: 500 }, { i: 0, ms: 120 } ],
   },
-  // Full official walk cycle — used for Bash scurry and wander travel.
+  // Official walk cycle — frames 0-4 are the flat standing pose and would hiccup
+  // the loop, so the cycle uses only the true walking frames.
   walk: {
     loop: true,
-    steps: Array.from({ length: 20 }, (_, i) => ({ i, ms: 70 })),
+    steps: Array.from({ length: 15 }, (_, k) => ({ i: k + 5, ms: 70 })),
   },
   // Thinking: slow pensive shuffle.
   think: { loop: true, steps: [ { i: 4, ms: 500 }, { i: 5, ms: 500 }, { i: 4, ms: 500 }, { i: 0, ms: 700 } ] },
@@ -50,10 +51,10 @@ const BUBBLE = "#f2e7dc";
 
 export class SpriteRenderer {
   constructor(canvas) {
-    canvas.width = CANVAS_W;
-    canvas.height = CANVAS_H;
+    this.canvas = canvas;
     this.ctx = canvas.getContext("2d");
-    this.ctx.imageSmoothingEnabled = false;
+    this._fit();
+    window.addEventListener("resize", () => this._fit());
     this.anim = "rest";
     this.step = 0;
     this.facing = 1; // 1 = natural, -1 = flipped
@@ -84,6 +85,22 @@ export class SpriteRenderer {
 
   setFacing(dir) {
     this.facing = dir === "left" ? -1 : 1;
+  }
+
+  /// Match the backing store to physical pixels (window size × devicePixelRatio)
+  /// so nothing is resampled by CSS; drawing scales logical→physical with
+  /// smoothing off for hard pixel edges.
+  _fit() {
+    const dpr = window.devicePixelRatio || 1;
+    const w = Math.max(1, Math.round(this.canvas.clientWidth * dpr));
+    const h = Math.max(1, Math.round(this.canvas.clientHeight * dpr));
+    if (this.canvas.width !== w || this.canvas.height !== h) {
+      this.canvas.width = w;
+      this.canvas.height = h;
+    }
+    this._scale = Math.min(w / CANVAS_W, h / CANVAS_H);
+    this._ox = (w - CANVAS_W * this._scale) / 2;
+    this._oy = (h - CANVAS_H * this._scale) / 2;
   }
 
   start() {
@@ -140,8 +157,12 @@ export class SpriteRenderer {
     const ctx = this.ctx;
     const s = SPRITES[this.anim].steps[this.step];
     const img = this.images[s.i];
-    ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     if (!img.complete || img.naturalWidth === 0) return;
+    // Logical (51×48) space, scaled to physical pixels; nearest-neighbor.
+    ctx.setTransform(this._scale, 0, 0, this._scale, this._ox, this._oy);
+    ctx.imageSmoothingEnabled = false;
     ctx.save();
     if (this.facing === -1) {
       ctx.translate(CANVAS_W, 0);

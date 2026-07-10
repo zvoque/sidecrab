@@ -173,7 +173,6 @@ pub fn run() {
             set_opaque_rect,
             set_drag_lock,
             show_menu,
-            os_actions::move_window_by,
             os_actions::set_window_pos,
             os_actions::get_geometry,
             os_actions::persist_position,
@@ -192,20 +191,23 @@ pub fn run() {
             let _ = win.set_visible_on_all_workspaces(true);
 
             let cfg = config::load();
-            let px = os_actions::size_px(&cfg.size);
-            let _ = win.set_size(tauri::LogicalSize::new(px, px));
+            let (lw, lh) = os_actions::logical_size(&cfg.size);
+            let _ = win.set_size(tauri::LogicalSize::new(lw, lh));
             match cfg.position {
                 Some((x, y)) => {
                     let _ = win.set_position(tauri::PhysicalPosition::new(x, y));
                 }
                 None => {
-                    // Default resting spot: bottom-right corner.
-                    if let (Ok(Some(mon)), Ok(size)) = (win.current_monitor(), win.outer_size()) {
+                    // Default resting spot: bottom-right corner. Compute the window's
+                    // physical size (outer_size would still report the pre-resize value).
+                    if let Ok(Some(mon)) = win.current_monitor() {
                         let m = mon.size();
-                        let margin = (24.0 * mon.scale_factor()) as i32;
+                        let scale = mon.scale_factor();
+                        let (w, h) = ((lw * scale).round() as i32, (lh * scale).round() as i32);
+                        let margin = (24.0 * scale) as i32;
                         let _ = win.set_position(tauri::PhysicalPosition::new(
-                            m.width as i32 - size.width as i32 - margin,
-                            m.height as i32 - size.height as i32 - margin,
+                            m.width as i32 - w - margin,
+                            m.height as i32 - h - margin,
                         ));
                     }
                 }
