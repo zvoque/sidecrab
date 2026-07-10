@@ -41,16 +41,21 @@ export class StateMachine {
     this._stopMicro();
   }
 
+  /// Unpause only — the caller re-applies state right after, which restores the
+  /// proper animation AND re-arms the micro timer (arming here first would trip
+  /// apply()'s repeat-idle guard and leave the walk animation frozen).
   resumeIdleLife() {
     this._microPaused = false;
-    if (this.state === "idle") this._scheduleMicro();
   }
 
   apply({ state, tool } = {}) {
     const next = state || "idle";
     // Repeat idle events (hook chatter) must not reset the micro-life timer
     // (or cancel an active hover), or the crab never gets around to blinking.
-    if (next === "idle" && this.state === "idle" && (this._micro || this._hovering)) return;
+    if (next === "idle" && this.state === "idle" && (this._micro || this._hovering)) {
+      if (this._hovering) this.r.play("hover"); // e.g. came home hovered mid-walk-anim
+      return;
+    }
     clearTimeout(this._decay);
     this._stopMicro();
     this.state = next;

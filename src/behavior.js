@@ -1,16 +1,16 @@
 // Wander-when-idle: when the USER goes idle (and the toggle is on) the crab takes
-// random walks around the current display; on user input it walks back to its
-// resting spot.
+// random walks around the current display; on user input it walks back home.
 //
-// Invariant: the window NEVER moves unless the walk animation is playing. Every
-// movement step re-checks `renderer.anim === "walk"`; if anything (Claude state,
-// petting) takes over the animation, movement halts on the spot and the crab
-// reacts right where it is. Idle micro-life is suspended for the whole excursion
-// so it can't freeze the legs mid-walk.
+// Invariants:
+// - The window NEVER moves unless the walk animation is playing.
+// - Hover PAUSES any excursion (crouch in place); it never cancels it.
+// - `home` is stable: the dragged/persisted spot (or the startup position), never
+//   a mid-wander location. A displaced idle crab always walks itself home.
 
 const STEP_MS = 28;
 const WANDER_SPEED = 3; // px per step
 const HOME_SPEED = 6;   // scurry home faster
+const HOME_EPS = 8;     // px: closer than this counts as home
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -21,41 +21,65 @@ export function attachBehavior({ renderer, sm }) {
   let enabled = false;
   let mode = "off"; // off | wander | home
   let driving = false;
-  let home = null; // {x, y} resting position to return to
+  let hovering = false;
+  let home = null; // {x, y} stable resting position
 
-  invoke("get_config").then((c) => (enabled = c.wanderEnabled));
-  listen("wander-changed", (e) => {
-    enabled = !!e.payload;
-    if (!enabled) mode = "off";
+  // Capture the startup spot as home until a drag defines one.
+  invoke("get_geometry").then((g) => {
+    if (g && !home) home = { x: g.winX, y: g.winY };
   });
+  invoke("get_config").then((c) => (enabled = c.wanderEnabled));
+  listen("wander-changed", (e) => (enabled = !!e.payload));
+  listen("crab-hover", (e) => (hovering = !!e.payload));
   listen("user-active", () => {
     if (mode === "wander") mode = "home";
   });
-  // Poll instead of relying on the one-shot user-idle transition event: the crab is
-  // often mid-animation (Claude busy) at that exact moment and must re-check later.
+
+  // Ticker replaces one-shot events: re-checks wander eligibility, syncs home with
+  // the persisted (dragged) position, and walks a stranded crab back home.
   setInterval(async () => {
-    if (!enabled || mode !== "off" || driving || sm.current() !== "idle") return;
-    if (await invoke("user_is_idle")) {
+    if (driving || sm.current() !== "idle" || hovering) return;
+    const c = await invoke("get_config");
+    if (c.position) home = { x: c.position[0], y: c.position[1] };
+    const g = await invoke("get_geometry");
+    if (!g) return;
+    if (!home) home = { x: g.winX, y: g.winY };
+    if (Math.hypot(g.winX - home.x, g.winY - home.y) > HOME_EPS) {
+      mode = "home"; // stranded (hover mid-wander, Claude preemption, …) → go home
+      drive();
+      return;
+    }
+    if (enabled && mode === "off" && (await invoke("user_is_idle"))) {
       mode = "wander";
       drive();
     }
   }, 3000);
 
-  /// Claude went busy mid-wander: stop moving immediately and react in place.
-  /// No teleporting — the crab only ever relocates on its own legs.
+  /// Claude went busy mid-excursion: stop moving and react in place. The ticker
+  /// walks the crab home once things settle back to idle.
   function onClaudeState(payload) {
     if (payload?.state && payload.state !== "idle" && mode !== "off") mode = "off";
   }
 
-  /// Step the window toward (tx,ty). Halts the moment the walk anim is replaced —
-  /// movement and leg animation are never allowed to desync.
+  /// Step the window toward (tx,ty). Hover pauses in place; one-shot hijacks
+  /// (petting) get a grace period, then the walk reclaims the animation.
   async function walkTo(tx, ty, speed, live) {
-    renderer.play("walk");
     const g = await invoke("get_geometry");
     if (!g) return;
     let { winX: x, winY: y } = g;
-    renderer.setFacing(tx < x ? "left" : "right");
-    while (live() && renderer.anim === "walk" && Math.hypot(tx - x, ty - y) > speed) {
+    while (live()) {
+      if (hovering) {
+        await sleep(150); // crouching under the cursor — hold position
+        continue;
+      }
+      if (renderer.anim !== "walk") {
+        await sleep(800); // let a pet-hop / hover-exit settle
+        if (!live() || hovering) continue;
+        renderer.play("walk");
+        renderer.setFacing(tx < x ? "left" : "right");
+        continue;
+      }
+      if (Math.hypot(tx - x, ty - y) <= speed) return;
       const ang = Math.atan2(ty - y, tx - x);
       x += Math.cos(ang) * speed;
       y += Math.sin(ang) * speed;
@@ -68,25 +92,14 @@ export function attachBehavior({ renderer, sm }) {
     if (driving) return;
     driving = true;
     sm.pauseIdleLife();
-    const g = await invoke("get_geometry");
-    if (!g) {
-      driving = false;
-      mode = "off";
-      sm.resumeIdleLife();
-      return;
-    }
-    home = { x: g.winX, y: g.winY };
 
     while (mode === "wander") {
+      const g = await invoke("get_geometry");
+      if (!g) break;
       const tx = g.monX + Math.random() * Math.max(1, g.monW - g.winW);
       const ty = g.monY + Math.random() * Math.max(1, g.monH - g.winH);
       await walkTo(tx, ty, WANDER_SPEED, () => mode === "wander");
       if (mode !== "wander") break;
-      if (renderer.anim !== "walk") {
-        // Something else claimed the animation (pet, Claude) — excursion over.
-        mode = "off";
-        break;
-      }
       renderer.play("rest");
       for (let t = 0; t < 2000 + Math.random() * 3000 && mode === "wander"; t += 100) {
         await sleep(100);
@@ -100,7 +113,7 @@ export function attachBehavior({ renderer, sm }) {
     driving = false;
     renderer.setFacing("right");
     sm.resumeIdleLife();
-    sm.apply({ state: sm.current() }); // restore the proper animation
+    sm.apply({ state: sm.current() }); // restore the proper animation (hover-safe)
   }
 
   return { onClaudeState };
