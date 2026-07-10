@@ -50,7 +50,9 @@ export function attachBehavior({ renderer, sm }) {
     sm.setHover(hovering);
     if (hovering && !driving && sm.current() === "idle") {
       const now = Date.now();
-      hoverHits = hoverHits.filter((t) => now - t < 30000);
+      // Quick succession only (10s window): casual cursor traffic across the
+      // screen must never read as harassment — only deliberate rapid poking.
+      hoverHits = hoverHits.filter((t) => now - t < 10000);
       hoverHits.push(now);
       if (hoverHits.length >= 4) {
         hoverHits = [];
