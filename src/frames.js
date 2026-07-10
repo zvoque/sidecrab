@@ -1,4 +1,4 @@
-// Clawd frames: 0-19 official walk cycle (extracted via CSB, quantized flat),
+// Frames 0-19: Anthropic's official Clawd walk cycle (extracted via CSB, quantized),
 // 20-21 wave, 22-23 stretch, 24-25 laptop typing, 26 pondering, 27-28 both-claw alert wave.
 // Frames 0-19 derive from Anthropic IP — personal use only. See README.
 export const FRAME_W = 51;

@@ -1,4 +1,4 @@
-// Clawd renderer: draws the official 20-frame walk cycle (frames.js) on a canvas.
+// Sidecrab renderer: draws the mascot frames (frames.js) on a canvas.
 // Anim = a sequence of {i: frameIndex, ms, dy?, blink?, squint?, halfEyes?,
 // eyesDx?, zzz?, mark?} steps. Facing flips
 // horizontally. No ambient bobbing — idle is still; micro-life comes from the idle
