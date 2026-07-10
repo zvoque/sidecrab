@@ -7,18 +7,10 @@
 //
 // Usage: clawd-pet-hook <prompt|pre|post|notify|permreq|stop|start|end>
 
+use clawd_pet_lib::paths::home;
 use serde_json::{json, Value};
 use std::io::Read;
-use std::path::{Path, PathBuf};
-
-fn home() -> PathBuf {
-    if let Ok(h) = std::env::var("CLAWD_PET_HOME") {
-        return PathBuf::from(h);
-    }
-    dirs::config_dir()
-        .unwrap_or_else(|| PathBuf::from("/tmp"))
-        .join("clawd-pet")
-}
+use std::path::Path;
 
 fn tool_label(tool: &str) -> &'static str {
     match tool {

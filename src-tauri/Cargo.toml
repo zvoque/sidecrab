@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Desktop pet crab that reacts to Claude Code activity"
 authors = ["zvoque"]
 edition = "2021"
+default-run = "clawd-pet"
 
 [lib]
 name = "clawd_pet_lib"
