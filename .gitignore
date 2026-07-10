@@ -7,3 +7,6 @@ dist/
 
 # Rust / Tauri
 /src-tauri/target/
+
+# Anthropic-IP reference frames — never commit
+art/reference/
