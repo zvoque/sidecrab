@@ -23,6 +23,13 @@ for the menu (size S/M/L, wander toggle, hook management, quit).
 **Wander when idle** (off by default, right-click to enable): when *you* go idle for
 ~60s, the crab takes little walks around the screen and scurries home when you're back.
 
+### Hats
+
+![hats](docs/gifs/hats.png)
+
+Right-click → **Hat** — top hat, chef's hat, fedora, or helicopter hat (rotor spins).
+The hat rides along through every animation.
+
 ## Requirements
 
 Claude Code (CLI, desktop app, or IDE). Nothing else — no node, no python, no other
