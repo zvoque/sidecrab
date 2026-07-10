@@ -7,14 +7,14 @@ and the crab in [claude-status-bar](https://github.com/m1ckc3s/claude-status-bar
 
 ## What it does
 
-| Claude Code | Crab |
-|---|---|
-| idle | rests, breathes, blinks |
-| thinking | looks up, taps a claw |
-| running a command | legs scurry |
-| editing/writing | claws type |
-| awaiting permission | claws up, "!" bubble |
-| done | happy hop |
+| | | |
+|:---:|:---:|:---:|
+| ![idle](docs/gifs/idle.gif) | ![working](docs/gifs/working.gif) | ![thinking](docs/gifs/thinking.gif) |
+| **idle** — blinks, stretches, waves | **working** — any tool, at his laptop | **thinking** — pondering with a thought bubble |
+| ![permission](docs/gifs/permission.gif) | ![walking](docs/gifs/walking.gif) | ![sleeping](docs/gifs/sleeping.gif) |
+| **needs permission** — flags you down | **wandering** — strolls when you're idle | **sleeping** — after a long quiet spell |
+| ![hover](docs/gifs/hover.gif) | ![celebrate](docs/gifs/celebrate.gif) | ![chase](docs/gifs/chase.gif) |
+| **hovered** — crouches and squints | **done** — happy hop (also when petted) | **harassed** — hover him too much and he chases your cursor |
 
 Interactions: **drag** to reposition (persists) · **click** to pet · **double-click** to
 focus the app running the session (Claude Desktop or your terminal) · **right-click**

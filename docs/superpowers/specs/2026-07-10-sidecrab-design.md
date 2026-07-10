@@ -1,8 +1,8 @@
-# Clawd Pet — Design Spec
+# Sidecrab — Design Spec
 
 **Date:** 2026-07-10
 **Status:** Approved for planning
-**Project:** `~/Desktop/dev/clawd-pet`
+**Project:** `~/Desktop/dev/sidecrab`
 
 ## 1. Overview
 
@@ -44,10 +44,10 @@ filesystem watching; the frontend is vanilla HTML/CSS/JS with a `<canvas>` for t
 No frontend framework, no external runtime.
 
 ```
-Claude Code (any surface) ──fires hooks──▶ clawd-pet-hook (bundled binary)
+Claude Code (any surface) ──fires hooks──▶ sidecrab-hook (bundled binary)
                                              │ writes state.json + sessions.d/
                                              ▼
-                         <app-config>/clawd-pet/state.json
+                         <app-config>/sidecrab/state.json
                                              │ (watched)
 ┌─────────────────────────────────────────────────────────┐
 │ Rust backend (src-tauri)                                 │
@@ -55,7 +55,7 @@ Claude Code (any surface) ──fires hooks──▶ clawd-pet-hook (bundled bin
 │    ~/.claude/settings.json (idempotent, additive)        │
 │  • creates the floating window (always-on-top,           │
 │    transparent, borderless, all-Spaces, skip-taskbar)    │
-│  • watches <app-config>/clawd-pet/state.json (notify)    │
+│  • watches <app-config>/sidecrab/state.json (notify)    │
 │    → emits `claude-state` event to the webview           │
 │  • polls macOS HIDIdleTime → emits `user-idle`/`user-active` │
 │  • commands: set_ignore_cursor_events, resize, reveal    │
@@ -76,9 +76,9 @@ Claude Code (any surface) ──fires hooks──▶ clawd-pet-hook (bundled bin
 
 | Unit | Responsibility | Depends on |
 |---|---|---|
-| `clawd-pet-hook` (Rust bin) | Standalone hook handler: read hook JSON on stdin, map event→status, atomically write `state.json`; maintain `sessions.d/`; record `TERM_PROGRAM`/host at SessionStart | serde_json |
+| `sidecrab-hook` (Rust bin) | Standalone hook handler: read hook JSON on stdin, map event→status, atomically write `state.json`; maintain `sessions.d/`; record `TERM_PROGRAM`/host at SessionStart | serde_json |
 | `hook_installer` (Rust) | On first run, idempotently add our hook entries to `~/.claude/settings.json` (additive, preserves existing incl. CSB); command to remove them | serde_json |
-| `state_watcher` (Rust) | Watch `<app-config>/clawd-pet/state.json`, debounce, parse, emit `claude-state` | notify, serde_json, Tauri emit |
+| `state_watcher` (Rust) | Watch `<app-config>/sidecrab/state.json`, debounce, parse, emit `claude-state` | notify, serde_json, Tauri emit |
 | `idle_monitor` (Rust) | Poll `HIDIdleTime`, emit `user-idle`/`user-active` on threshold crossing | core-foundation/`ioreg`, Tauri emit |
 | `os_actions` (Rust) | `reveal_transcript`, `activate_host` (Claude.app or terminal via recorded `TERM_PROGRAM`), `set_click_through`, `resize_window` commands | Tauri, `open`/AppleScript |
 | `config` (Rust) | Load/save `{position, size, wanderEnabled}` JSON in app-config dir | tauri app dir, serde |
@@ -92,8 +92,8 @@ machine is a pure map from state string → animation id; config round-trips JSO
 
 ## 4. State feed — our own, standalone
 
-We own the whole feed. The bundled `clawd-pet-hook` binary is invoked by our hooks and
-atomically writes `<app-config>/clawd-pet/state.json`:
+We own the whole feed. The bundled `sidecrab-hook` binary is invoked by our hooks and
+atomically writes `<app-config>/sidecrab/state.json`:
 
 ```json
 {
@@ -109,7 +109,7 @@ atomically writes `<app-config>/clawd-pet/state.json`:
 }
 ```
 
-**Hook → status mapping** (in `clawd-pet-hook`, mirrors the proven CSB logic):
+**Hook → status mapping** (in `sidecrab-hook`, mirrors the proven CSB logic):
 
 | Hook event | state | label |
 |---|---|---|
@@ -122,7 +122,7 @@ atomically writes `<app-config>/clawd-pet/state.json`:
 | `SessionEnd` | — | remove `sessions.d/<sid>` |
 
 - **First-run consent (disclaimer):** before any edit, the pet shows a one-time dialog:
-  *"Clawd Pet needs to add hooks to `~/.claude/settings.json` so it can tell when Claude Code
+  *"Sidecrab needs to add hooks to `~/.claude/settings.json` so it can tell when Claude Code
   is working. Your file is backed up to `settings.json.bak` first, existing hooks are kept,
   and you can remove ours anytime from the right-click menu."* → **Enable / Not now.** No edit
   happens without consent; declining runs the app inert (idle crab) until enabled from the menu.
@@ -227,7 +227,7 @@ drag-drop, resize, and toggle changes.
 ## 9. Project structure
 
 ```
-clawd-pet/
+sidecrab/
 ├─ src/                     # frontend
 │  ├─ index.html
 │  ├─ main.js               # bootstrap, event wiring
@@ -245,7 +245,7 @@ clawd-pet/
 │  │  ├─ os_actions.rs
 │  │  ├─ config.rs
 │  │  └─ bin/
-│  │     └─ clawd_pet_hook.rs  # standalone hook handler (bundled binary)
+│  │     └─ sidecrab_hook.rs  # standalone hook handler (bundled binary)
 │  ├─ tauri.conf.json
 │  └─ Cargo.toml
 ├─ docs/superpowers/specs/  # this spec
@@ -259,12 +259,12 @@ clawd-pet/
   (CSB's choice) is a fine alternative but slower to build and we don't need native perf for
   a 24×24 sprite.
 - **Standalone via a bundled hook binary:** we write our own state feed by installing our own
-  Claude Code hooks that call a compiled `clawd-pet-hook` binary. This makes the pet depend on
+  Claude Code hooks that call a compiled `sidecrab-hook` binary. This makes the pet depend on
   nothing but Claude Code itself, needs no node/python, and avoids the version-pinned-`node`
   path that currently breaks CSB's hook on this machine. Trade-off: we auto-edit the user's
   `~/.claude/settings.json`. Mitigation: edits are additive and idempotent (keyed on our
   binary path), preserve all existing hooks, and are cleanly removable from the menu.
-- **Own state file, not CSB's:** we read our own `<app-config>/clawd-pet/state.json`, so the
+- **Own state file, not CSB's:** we read our own `<app-config>/sidecrab/state.json`, so the
   pet coexists with CSB without coupling to its schema or install state.
 - **Hand-coded pixels:** authentic 8-bit, tiny, frame-consistent, no AI-art cleanup, full
   control. Matches how CSB and `clawd-mochi` did it.
@@ -284,7 +284,7 @@ distributed, keep the name and art "inspired-by," not a copy, and avoid the Claw
 - **Hook install:** run first-launch install against a temp `settings.json` (empty, and one
   already containing CSB hooks); confirm our entries are added once, existing hooks preserved,
   and re-running is a no-op; confirm removal deletes only ours.
-- **Hook binary:** pipe sample hook JSON payloads into `clawd-pet-hook` for each event; assert
+- **Hook binary:** pipe sample hook JSON payloads into `sidecrab-hook` for each event; assert
   the written `state.json` and `sessions.d/` match the §4 mapping (incl. `host` from
   `TERM_PROGRAM`).
 - **Sprite/state machine:** headless unit check that each feed state maps to the expected
@@ -305,7 +305,7 @@ distributed, keep the name and art "inspired-by," not a copy, and avoid the Claw
 - **Only Claude Code** (any surface that reads `~/.claude/settings.json` and fires hooks:
   CLI, desktop app, IDE). No CSB, no node, no python — the hook handler is a bundled binary.
 - Writes to `~/.claude/settings.json` only after first-run consent (backup + additive +
-  idempotent + removable), and to `<app-config>/clawd-pet/`.
+  idempotent + removable), and to `<app-config>/sidecrab/`.
 - Build toolchain: `cargo` present; `tauri-cli` not yet installed locally
   (`cargo install tauri-cli` or `npm create tauri-app`). `node`/`npm` present but only for the
   Tauri dev tooling, not at runtime.
