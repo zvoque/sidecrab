@@ -3,6 +3,7 @@
 import { SpriteRenderer } from "./sprites.js";
 import { StateMachine } from "./state-machine.js";
 import { attachInput } from "./input.js";
+import { attachBehavior } from "./behavior.js";
 
 const IN_TAURI = typeof window.__TAURI__ !== "undefined";
 
@@ -16,9 +17,11 @@ window.addEventListener("DOMContentLoaded", async () => {
   if (IN_TAURI) {
     let host = "Claude"; // last seen host app, for double-click activation
     attachInput({ renderer, sm, getHost: () => host });
+    const behavior = attachBehavior({ renderer, sm });
     const { listen } = window.__TAURI__.event;
     await listen("claude-state", (e) => {
       if (e.payload?.host) host = e.payload.host;
+      behavior.onClaudeState(e.payload); // wander preemption before the anim swap
       sm.apply(e.payload);
     });
   } else {

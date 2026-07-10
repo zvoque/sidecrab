@@ -21,7 +21,8 @@
         "shadow": false,
         "skipTaskbar": true,
         "resizable": false,
-        "focus": false
+        "focus": false,
+        "devtools": false
       }
     ],
     "security": {

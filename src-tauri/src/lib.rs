@@ -1,5 +1,6 @@
 pub mod config;
 pub mod hook_installer;
+pub mod idle_monitor;
 pub mod os_actions;
 pub mod paths;
 pub mod state_watcher;
@@ -138,6 +139,8 @@ pub fn run() {
             set_drag_lock,
             show_menu,
             os_actions::move_window_by,
+            os_actions::set_window_pos,
+            os_actions::get_geometry,
             os_actions::persist_position,
             os_actions::activate_host,
             os_actions::resize_window,
@@ -175,6 +178,7 @@ pub fn run() {
             app.on_menu_event(|app, event| on_menu(app, event.id().as_ref()));
             state_watcher::spawn(app.handle().clone());
             spawn_click_through_poller(app.handle().clone());
+            idle_monitor::spawn(app.handle().clone());
             Ok(())
         })
         .run(tauri::generate_context!())

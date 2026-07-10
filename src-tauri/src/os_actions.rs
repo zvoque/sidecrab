@@ -13,6 +13,28 @@ pub fn move_window_by(window: WebviewWindow, dx: i32, dy: i32) {
     }
 }
 
+/// Absolute placement (wander walking / teleport home).
+#[tauri::command]
+pub fn set_window_pos(window: WebviewWindow, x: i32, y: i32) {
+    let _ = window.set_position(tauri::PhysicalPosition::new(x, y));
+}
+
+/// Window + current-monitor rects in physical px, for wander pathing bounds.
+#[tauri::command]
+pub fn get_geometry(window: WebviewWindow) -> Option<serde_json::Value> {
+    let pos = window.outer_position().ok()?;
+    let size = window.outer_size().ok()?;
+    let mon = window.current_monitor().ok()??;
+    let mp = mon.position();
+    let ms = mon.size();
+    Some(serde_json::json!({
+        "winX": pos.x, "winY": pos.y,
+        "winW": size.width, "winH": size.height,
+        "monX": mp.x, "monY": mp.y,
+        "monW": ms.width, "monH": ms.height,
+    }))
+}
+
 /// Persist the current window position (called on drag end).
 #[tauri::command]
 pub fn persist_position(window: WebviewWindow) {
