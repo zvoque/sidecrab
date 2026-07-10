@@ -50,7 +50,20 @@ To see Claude Code activity, Sidecrab registers hook entries in
 The hook writes state to `~/Library/Application Support/sidecrab/` and does nothing
 else: no network, no telemetry, no reading your code.
 
-## Build & run
+## Install
+
+```bash
+brew install zvoque/tap/sidecrab
+sidecrab
+```
+
+That's it — he appears bottom-right and your terminal is free. On first run he asks
+before adding Claude Code hooks (see the disclaimer below). Right-click him for
+settings, including **Launch at login**.
+
+Update later with `brew upgrade sidecrab`.
+
+## Build from source
 
 ```bash
 # prerequisites: rust toolchain + npm
