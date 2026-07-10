@@ -117,6 +117,9 @@ export class StateMachine {
   /// you from the desk — on the frame matching their arm pose — otherwise the
   /// classic crouch. No more vanishing laptop or jumping arms.
   _hoverAnim() {
+    // Mid-travel he's face-on walking — a seated-laptop hover pose would
+    // materialize a phantom laptop. Crouch instead; seat poses only when seated.
+    if (this._traveling) return "hover";
     if (this.state === "tool") return "hoverWork";
     if (this.state === "thinking") return "hoverThink";
     return "hover";
@@ -147,8 +150,9 @@ export class StateMachine {
     this._stopMicro();
     this._sleeping = false;
     this._idleSince = Date.now();
+    const seated = !this._traveling && (this.state === "tool" || this.state === "thinking");
     const petAnim =
-      this.state === "tool" ? "petWork" : this.state === "thinking" ? "petThink" : "celebrate";
+      seated && this.state === "tool" ? "petWork" : seated ? "petThink" : "celebrate";
     this.r.play(petAnim);
     clearTimeout(this._decay);
     this._decay = setTimeout(() => this.apply(prev), 700);
