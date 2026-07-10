@@ -5,7 +5,7 @@ use std::time::Duration;
 use tauri::{AppHandle, Emitter};
 
 const POLL: Duration = Duration::from_secs(2);
-const DEFAULT_THRESHOLD_SECS: f64 = 60.0;
+const DEFAULT_THRESHOLD_SECS: f64 = 30.0;
 
 pub fn threshold_secs() -> f64 {
     std::env::var("SIDECRAB_IDLE_SECS")

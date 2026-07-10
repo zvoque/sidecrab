@@ -21,7 +21,7 @@ focus the app running the session (Claude Desktop or your terminal) · **right-c
 for the menu (size S/M/L, wander toggle, hook management, quit).
 
 **Wander when idle** (off by default, right-click to enable): when *you* go idle for
-~60s, the crab takes little walks around the screen and scurries home when you're back.
+~30s, the crab takes little walks around the screen and scurries home when you're back.
 
 ### Hats
 
