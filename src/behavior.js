@@ -61,25 +61,26 @@ export function attachBehavior({ renderer, sm }) {
     if (payload?.state && payload.state !== "idle" && mode !== "off") mode = "off";
   }
 
-  /// Step the window toward (tx,ty). Hover pauses in place; one-shot hijacks
-  /// (petting) get a grace period, then the walk reclaims the animation.
+  /// Step the window toward (tx,ty). Hover and a mid-pet hop pause in place;
+  /// otherwise the walk claims the animation immediately and moves. Arrival
+  /// snaps to the exact target so "home" is pixel-accurate.
   async function walkTo(tx, ty, speed, live) {
     const g = await invoke("get_geometry");
     if (!g) return;
     let { winX: x, winY: y } = g;
     while (live()) {
-      if (hovering) {
-        await sleep(150); // crouching under the cursor — hold position
+      if (hovering || renderer.anim === "celebrate") {
+        await sleep(150); // crouching under the cursor / finishing a pet hop
         continue;
       }
       if (renderer.anim !== "walk") {
-        await sleep(800); // let a pet-hop / hover-exit settle
-        if (!live() || hovering) continue;
         renderer.play("walk");
         renderer.setFacing(tx < x ? "left" : "right");
-        continue;
       }
-      if (Math.hypot(tx - x, ty - y) <= speed) return;
+      if (Math.hypot(tx - x, ty - y) <= speed) {
+        invoke("set_window_pos", { x: Math.round(tx), y: Math.round(ty) });
+        return;
+      }
       const ang = Math.atan2(ty - y, tx - x);
       x += Math.cos(ang) * speed;
       y += Math.sin(ang) * speed;

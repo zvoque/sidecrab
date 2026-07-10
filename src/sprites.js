@@ -38,6 +38,9 @@ export const SPRITES = {
   think: { loop: true, steps: [ { i: 4, ms: 500 }, { i: 5, ms: 500 }, { i: 4, ms: 500 }, { i: 0, ms: 700 } ] },
   // Editing: quick fidget, like tapping away.
   type: { loop: true, steps: [ { i: 5, ms: 130 }, { i: 7, ms: 130 } ] },
+  // Running a command: busy in-place scurry — deliberately NOT the walk cycle,
+  // so stationary work never reads as confused walking.
+  busy: { loop: true, steps: [ { i: 6, ms: 110 }, { i: 16, ms: 110 } ] },
   // Hovered: crouch down (legs sink into the ground) and squint contentedly.
   hover: { loop: true, steps: [{ i: 0, ms: 60000, dy: 3, squint: true }] },
   // Awaiting permission: still, urgent "!" bubble pulsing.

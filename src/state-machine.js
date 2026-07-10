@@ -73,8 +73,9 @@ export class StateMachine {
         this.r.play("think");
         break;
       case "tool":
-        // Bash scurries with the real walk cycle; edit-ish tools fidget-type.
-        this.r.play(RUN_TOOLS.has(tool) ? "walk" : "type");
+        // Bash gets the in-place busy scurry (the walk cycle is reserved for
+        // actual travel); edit-ish tools fidget-type.
+        this.r.play(RUN_TOOLS.has(tool) ? "busy" : "type");
         break;
       case "permission":
         this.r.play("alert");
