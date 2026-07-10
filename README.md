@@ -7,10 +7,10 @@ and the crab in [claude-status-bar](https://github.com/m1ckc3s/claude-status-bar
 
 ## What he does
 
-| | | |
-|:---:|:---:|:---:|
-| ![working](docs/gifs/working.gif) | ![thinking](docs/gifs/thinking.gif) | ![permission](docs/gifs/permission.gif) |
-| **working** — any tool, at his laptop | **thinking** — pondering | **needs permission** — flags you down |
+| | | | |
+|:---:|:---:|:---:|:---:|
+| ![idle](docs/gifs/idle.gif) | ![working](docs/gifs/working.gif) | ![thinking](docs/gifs/thinking.gif) | ![permission](docs/gifs/permission.gif) |
+| **idle** | **working** — any tool, at his laptop | **thinking** — pondering | **needs permission** — flags you down |
 
 …plus a bunch more moods and moves he'll show you himself.
 
@@ -33,23 +33,6 @@ The hat rides along through every animation.
 Claude Code (CLI, desktop app, or IDE). Nothing else — no node, no python, no other
 tools. The activity feed comes from a small bundled binary (`sidecrab-hook`).
 
-## ⚠️ Disclaimer: this app edits `~/.claude/settings.json`
-
-To see Claude Code activity, Sidecrab registers hook entries in
-`~/.claude/settings.json` that invoke its bundled `sidecrab-hook` binary. Know this:
-
-- **Nothing is written without your consent.** On first run you get a dialog; declining
-  leaves your settings untouched (the crab just idles).
-- **Your original file is backed up** to `~/.claude/settings.json.bak` before the first
-  edit, and the backup is never overwritten afterwards.
-- **Edits are additive.** All existing hooks (other tools included) are preserved; ours
-  are appended alongside and are identifiable by the `sidecrab-hook` path.
-- **Removal is one click:** right-click the crab → *Remove Claude Code hooks* strips
-  exactly our entries and nothing else.
-
-The hook writes state to `~/Library/Application Support/sidecrab/` and does nothing
-else: no network, no telemetry, no reading your code.
-
 ## Install
 
 ```bash
@@ -57,9 +40,11 @@ brew install zvoque/tap/sidecrab
 sidecrab
 ```
 
-That's it — he appears bottom-right and your terminal is free. On first run he asks
-before adding Claude Code hooks (see the disclaimer below). Right-click him for
+That's it — he appears bottom-right and your terminal is free. Right-click him for
 settings, including **Launch at login**.
+
+On first run he asks before adding a few hooks to `~/.claude/settings.json` so he can
+tell when Claude is working (your file is backed up; remove them anytime from his menu).
 
 Update later with `brew upgrade sidecrab`.
 
