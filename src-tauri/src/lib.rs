@@ -158,6 +158,15 @@ fn build_settings_menu(app: &AppHandle) -> Option<tauri::menu::Submenu<tauri::Wr
         .build(app)
         .ok()?;
 
+    let autostart_on = {
+        use tauri_plugin_autostart::ManagerExt;
+        app.autolaunch().is_enabled().unwrap_or(false)
+    };
+    let autostart = CheckMenuItemBuilder::with_id("autostart", "Launch at login")
+        .checked(autostart_on)
+        .build(app)
+        .ok()?;
+
     let hooks = if hooks_on {
         MenuItemBuilder::with_id("hooks-remove", "Remove Claude Code hooks").build(app).ok()?
     } else {
@@ -169,6 +178,7 @@ fn build_settings_menu(app: &AppHandle) -> Option<tauri::menu::Submenu<tauri::Wr
         .item(&position)
         .item(&hat)
         .item(&wander)
+        .item(&autostart)
         .separator()
         .item(&hooks)
         .separator()
@@ -231,6 +241,15 @@ fn on_menu(app: &AppHandle, id: &str) {
             let enabled = !config::load().wander_enabled;
             os_actions::set_wander(enabled);
             let _ = app.emit("wander-changed", enabled);
+        }
+        "autostart" => {
+            use tauri_plugin_autostart::ManagerExt;
+            let al = app.autolaunch();
+            if al.is_enabled().unwrap_or(false) {
+                let _ = al.disable();
+            } else {
+                let _ = al.enable();
+            }
         }
         id if id.starts_with("hat-") => {
             let hat = id.trim_start_matches("hat-").to_string();
@@ -302,6 +321,10 @@ pub fn run() {
     tauri::Builder::default()
         // Second launch = no twin crabs; the existing instance just stays.
         .plugin(tauri_plugin_single_instance::init(|_app, _args, _cwd| {}))
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            Some(vec!["--foreground"]), // agent child must not re-daemonize
+        ))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
