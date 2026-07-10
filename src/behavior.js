@@ -47,8 +47,10 @@ export function attachBehavior({ renderer, sm }) {
 
   // Ticker replaces one-shot events: re-checks wander eligibility, syncs home with
   // the persisted (dragged) position, and walks a stranded crab back home.
+  // Homing does NOT wait for Claude to go idle — during an active session the
+  // crab is almost never state-idle, and a stranded crab must still come home.
   setInterval(async () => {
-    if (driving || sm.current() !== "idle" || hovering) return;
+    if (driving || hovering) return;
     const c = await call("get_config");
     if (c?.position) home = { x: c.position[0], y: c.position[1] };
     const g = await call("get_geometry");
@@ -59,16 +61,21 @@ export function attachBehavior({ renderer, sm }) {
       drive();
       return;
     }
-    if (enabled && mode === "off" && (await call("user_is_idle")) === true) {
+    if (
+      enabled &&
+      mode === "off" &&
+      sm.current() === "idle" &&
+      (await call("user_is_idle")) === true
+    ) {
       mode = "wander";
       drive();
     }
   }, 3000);
 
-  /// Claude went busy mid-excursion: stop moving and react in place. The ticker
-  /// walks the crab home once things settle back to idle.
+  /// Claude went busy mid-wander: abandon sightseeing and head home (walking —
+  /// reactions play at home after arrival). Homing itself is never interrupted.
   function onClaudeState(payload) {
-    if (payload?.state && payload.state !== "idle" && mode !== "off") mode = "off";
+    if (payload?.state && payload.state !== "idle" && mode === "wander") mode = "home";
   }
 
   /// Step the window toward (tx,ty). Hover and a mid-pet hop pause in place;
@@ -78,14 +85,17 @@ export function attachBehavior({ renderer, sm }) {
     const g = await call("get_geometry");
     if (!g) return;
     let { winX: x, winY: y } = g;
+    let hopWait = 0; // bounded pause for a pet hop; can't wedge the journey
     while (live()) {
-      if (hovering || renderer.anim === "celebrate") {
+      if (hovering || (renderer.anim === "celebrate" && hopWait < 1200)) {
+        hopWait += hovering ? 0 : 150;
         await sleep(150); // crouching under the cursor / finishing a pet hop
         continue;
       }
       if (renderer.anim !== "walk") {
         renderer.play("walk");
         renderer.setFacing(tx < x ? "left" : "right");
+        hopWait = 0;
       }
       if (Math.hypot(tx - x, ty - y) <= speed) {
         invoke("set_window_pos", { x: Math.round(tx), y: Math.round(ty) });
@@ -103,6 +113,7 @@ export function attachBehavior({ renderer, sm }) {
     if (driving) return;
     driving = true;
     sm.pauseIdleLife();
+    sm.setTraveling(true); // hook events track state but leave the walk anim alone
 
     while (mode === "wander") {
       const g = await call("get_geometry");
@@ -123,8 +134,9 @@ export function attachBehavior({ renderer, sm }) {
     mode = "off";
     driving = false;
     renderer.setFacing("right");
+    sm.setTraveling(false);
     sm.resumeIdleLife();
-    sm.apply({ state: sm.current() }); // restore the proper animation (hover-safe)
+    sm.apply({ state: sm.current(), tool: sm._lastTool }); // arrival: react properly
   }
 
   return { onClaudeState };

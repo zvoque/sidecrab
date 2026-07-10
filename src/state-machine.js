@@ -68,6 +68,7 @@ export class StateMachine {
       this.r.play("hover"); // hover hijacks whatever would play; state tracks underneath
       return;
     }
+    if (this._traveling) return; // behavior owns the visuals while walking somewhere
     switch (next) {
       case "thinking":
         this.r.play("think");
@@ -93,6 +94,13 @@ export class StateMachine {
     return this.state;
   }
 
+  /// Behavior sets this while it walks the window somewhere: state keeps tracking
+  /// (and hover still hijacks), but hook events must not swap the walk animation
+  /// out from under a moving window.
+  setTraveling(on) {
+    this._traveling = !!on;
+  }
+
   /// Cursor over the crab: hover hijacks whatever is playing; leaving restores
   /// the animation the current state calls for.
   setHover(on) {
@@ -102,6 +110,8 @@ export class StateMachine {
     if (on) {
       this._stopMicro();
       this.r.play("hover");
+    } else if (this._traveling) {
+      // walkTo reclaims the walk animation on its next tick
     } else {
       this.apply({ state: this.state, tool: this._lastTool });
     }
