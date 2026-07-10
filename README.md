@@ -51,8 +51,9 @@ Whatever he's wearing rides along through every animation.
 
 ## Requirements
 
-Just Claude Code (CLI, desktop app, or IDE). No node, no python, nothing else.
-The activity feed comes from a small bundled binary.
+Just Claude Code. No node, no python, nothing else. The activity feed comes from
+a small bundled binary that runs off Claude Code's hooks, so any surface that
+fires the hooks in your `~/.claude/settings.json` (the CLI does) drives the crab.
 
 ## Setup
 
