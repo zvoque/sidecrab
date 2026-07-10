@@ -3,7 +3,7 @@
 # in-app auto-updater.
 #
 # Required repo secrets:
-#   TAURI_SIGNING_PRIVATE_KEY          — contents of ~/.tauri/clawd-pet.key
+#   TAURI_SIGNING_PRIVATE_KEY          — contents of ~/.tauri/sidecrab.key
 #   TAURI_SIGNING_PRIVATE_KEY_PASSWORD — empty string (key generated without one)
 # Optional (Apple notarization, when a Developer ID exists):
 #   APPLE_CERTIFICATE, APPLE_CERTIFICATE_PASSWORD, APPLE_SIGNING_IDENTITY,
@@ -32,13 +32,13 @@ jobs:
       - name: Build sidecar (universal)
         run: |
           cd src-tauri
-          cargo build --release -p clawd-pet-hook --target aarch64-apple-darwin
-          cargo build --release -p clawd-pet-hook --target x86_64-apple-darwin
+          cargo build --release -p sidecrab-hook --target aarch64-apple-darwin
+          cargo build --release -p sidecrab-hook --target x86_64-apple-darwin
           mkdir -p binaries
           lipo -create \
-            target/aarch64-apple-darwin/release/clawd-pet-hook \
-            target/x86_64-apple-darwin/release/clawd-pet-hook \
-            -output binaries/clawd-pet-hook-universal-apple-darwin
+            target/aarch64-apple-darwin/release/sidecrab-hook \
+            target/x86_64-apple-darwin/release/sidecrab-hook \
+            -output binaries/sidecrab-hook-universal-apple-darwin
 
       - uses: tauri-apps/tauri-action@v0
         env:

@@ -63,7 +63,7 @@ fn check_for_updates(app: AppHandle) {
     });
 }
 
-const CONSENT_TEXT: &str = "To react to Claude Code activity, Clawd Pet adds hooks to \
+const CONSENT_TEXT: &str = "To react to Claude Code activity, Sidecrab adds hooks to \
 ~/.claude/settings.json.\n\nYour file is backed up to settings.json.bak first, existing \
 hooks are kept untouched, and you can remove ours anytime via right-click → \
 \"Remove Claude Code hooks\".\n\nEnable activity detection?";
@@ -81,7 +81,7 @@ fn maybe_ask_consent(app: &AppHandle) {
     let handle = app.clone();
     app.dialog()
         .message(CONSENT_TEXT)
-        .title("Clawd Pet")
+        .title("Sidecrab")
         .buttons(MessageDialogButtons::OkCancelCustom(
             "Enable".into(),
             "Not now".into(),
@@ -173,7 +173,7 @@ fn build_settings_menu(app: &AppHandle) -> Option<tauri::menu::Submenu<tauri::Wr
         MenuItemBuilder::with_id("hooks-install", "Enable activity detection…").build(app).ok()?
     };
 
-    SubmenuBuilder::new(app, "Clawd Pet")
+    SubmenuBuilder::new(app, "Sidecrab")
         .item(&size)
         .item(&position)
         .item(&hat)
@@ -184,7 +184,7 @@ fn build_settings_menu(app: &AppHandle) -> Option<tauri::menu::Submenu<tauri::Wr
         .separator()
         .items(&[
             &MenuItemBuilder::with_id("update-check", "Check for Updates…").build(app).ok()?,
-            &MenuItemBuilder::with_id("quit", "Quit Clawd Pet")
+            &MenuItemBuilder::with_id("quit", "Quit Sidecrab")
                 .accelerator("CmdOrCtrl+Q")
                 .build(app)
                 .ok()?,
@@ -316,8 +316,24 @@ fn spawn_click_through_poller(app: AppHandle) {
     });
 }
 
+/// Pre-rename installs used the "clawd-pet" config dir; carry it over so
+/// position/hat/consent survive the upgrade.
+fn migrate_legacy_home() {
+    let new = paths::home();
+    if new.exists() {
+        return;
+    }
+    if let Some(cfg_dir) = dirs::config_dir() {
+        let old = cfg_dir.join("clawd-pet");
+        if old.exists() {
+            let _ = std::fs::rename(old, new);
+        }
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    migrate_legacy_home();
     tauri::Builder::default()
         // Second launch = no twin crabs; the existing instance just stays.
         .plugin(tauri_plugin_single_instance::init(|_app, _args, _cwd| {}))
@@ -371,6 +387,11 @@ pub fn run() {
             state_watcher::spawn(app.handle().clone());
             spawn_click_through_poller(app.handle().clone());
             idle_monitor::spawn(app.handle().clone());
+            // Pre-rename hook entries point at a binary that no longer exists —
+            // reinstall silently (consent was already given for those hooks).
+            if hook_installer::has_legacy_hooks(&paths::claude_settings_path()) {
+                let _ = os_actions::hooks_install(app.handle().clone());
+            }
             maybe_ask_consent(app.handle());
             Ok(())
         })

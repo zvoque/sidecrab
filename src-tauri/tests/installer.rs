@@ -1,7 +1,7 @@
 // Tests for hook_installer: merging our hook entries into ~/.claude/settings.json
 // must be consent-gated upstream, backed up, additive, idempotent, and removable
 // without touching anyone else's hooks (e.g. an existing CSB install).
-use clawd_pet_lib::hook_installer::{hooks_installed, install_hooks, remove_hooks};
+use sidecrab_lib::hook_installer::{hooks_installed, install_hooks, remove_hooks};
 use serde_json::{json, Value};
 use std::path::PathBuf;
 
@@ -34,7 +34,7 @@ fn count_ours(v: &Value, event: &str) -> usize {
         .as_array()
         .map(|a| {
             a.iter()
-                .filter(|e| e.to_string().contains("clawd-pet-hook"))
+                .filter(|e| e.to_string().contains("sidecrab-hook"))
                 .count()
         })
         .unwrap_or(0)
@@ -43,7 +43,7 @@ fn count_ours(v: &Value, event: &str) -> usize {
 #[test]
 fn installs_into_empty_settings_with_backup() {
     let path = tmp_settings("empty", &json!({}));
-    install_hooks(&path, "/apps/Clawd Pet.app/MacOS/clawd-pet-hook").unwrap();
+    install_hooks(&path, "/apps/Sidecrab.app/MacOS/sidecrab-hook").unwrap();
 
     let v = read(&path);
     for ev in EVENTS {
@@ -56,7 +56,7 @@ fn installs_into_empty_settings_with_backup() {
 #[test]
 fn install_is_idempotent() {
     let path = tmp_settings("idem", &json!({}));
-    let bin = "/x/clawd-pet-hook";
+    let bin = "/x/sidecrab-hook";
     install_hooks(&path, bin).unwrap();
     install_hooks(&path, bin).unwrap();
     let v = read(&path);
@@ -79,7 +79,7 @@ fn preserves_existing_hooks_and_removes_only_ours() {
         }
     });
     let path = tmp_settings("csb", &csb);
-    install_hooks(&path, "/x/clawd-pet-hook").unwrap();
+    install_hooks(&path, "/x/sidecrab-hook").unwrap();
 
     let v = read(&path);
     // CSB entries intact, ours added alongside.
@@ -100,9 +100,9 @@ fn preserves_existing_hooks_and_removes_only_ours() {
 fn backup_is_not_overwritten_by_reinstall() {
     let original = json!({"marker": "original"});
     let path = tmp_settings("bak", &original);
-    install_hooks(&path, "/x/clawd-pet-hook").unwrap();
+    install_hooks(&path, "/x/sidecrab-hook").unwrap();
     remove_hooks(&path).unwrap();
-    install_hooks(&path, "/x/clawd-pet-hook").unwrap();
+    install_hooks(&path, "/x/sidecrab-hook").unwrap();
     let bak: Value =
         serde_json::from_str(&std::fs::read_to_string(path.with_extension("json.bak")).unwrap())
             .unwrap();

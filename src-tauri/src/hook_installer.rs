@@ -8,7 +8,10 @@ use std::io;
 use std::path::Path;
 
 /// Stable marker identifying our entries regardless of install location.
-const MARKER: &str = "clawd-pet-hook";
+const MARKER: &str = "sidecrab-hook";
+/// Markers from older installs (pre-rename) — treated as ours so removal and
+/// reinstall migrate them instead of leaving dead entries behind.
+const LEGACY_MARKERS: [&str; 1] = ["clawd-pet-hook"];
 
 /// (settings event key, hook binary argument, needs "*" matcher)
 const EVENTS: [(&str, &str, bool); 8] = [
@@ -40,7 +43,19 @@ fn write_atomic(path: &Path, v: &Value) -> io::Result<()> {
 }
 
 fn entry_is_ours(entry: &Value) -> bool {
-    entry.to_string().contains(MARKER)
+    let s = entry.to_string();
+    s.contains(MARKER) || LEGACY_MARKERS.iter().any(|m| s.contains(m))
+}
+
+/// True when settings still carry entries from a pre-rename install (and no
+/// current ones) — the caller should silently reinstall to migrate them.
+pub fn has_legacy_hooks(settings_path: &Path) -> bool {
+    read_settings(settings_path)
+        .map(|v| {
+            let s = v["hooks"].to_string();
+            !s.contains(MARKER) && LEGACY_MARKERS.iter().any(|m| s.contains(m))
+        })
+        .unwrap_or(false)
 }
 
 /// Add our hook entries. Backs up the pristine file once (never overwrites an
@@ -75,9 +90,9 @@ pub fn install_hooks(settings_path: &Path, hook_bin: &str) -> io::Result<()> {
             *arr = json!([]);
         }
         let arr = arr.as_array_mut().unwrap();
-        if arr.iter().any(entry_is_ours) {
-            continue; // idempotent
-        }
+        // Replace-not-skip: drops stale entries (old binary paths, pre-rename
+        // legacy markers) while staying idempotent for current ones.
+        arr.retain(|e| !entry_is_ours(e));
         // Quote the binary path — the app bundle lives under "Application Support"/"…app".
         let cmd = format!("\"{}\" {}", hook_bin, arg);
         let mut entry = json!({ "hooks": [ { "type": "command", "command": cmd } ] });

@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Clawd Pet",
+  "productName": "Sidecrab",
   "version": "0.1.0",
-  "identifier": "com.zvoque.clawd-pet",
+  "identifier": "com.zvoque.sidecrab",
   "build": {
     "frontendDist": "../src"
   },
@@ -12,7 +12,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Clawd Pet",
+        "title": "Sidecrab",
         "width": 153,
         "height": 144,
         "decorations": false,
@@ -43,14 +43,14 @@
       "icons/icon.ico"
     ],
     "externalBin": [
-      "binaries/clawd-pet-hook"
+      "binaries/sidecrab-hook"
     ],
     "createUpdaterArtifacts": true
   },
   "plugins": {
     "updater": {
       "endpoints": [
-        "https://github.com/zvoque/REPO-NAME-TBD/releases/latest/download/latest.json"
+        "https://github.com/zvoque/sidecrab/releases/latest/download/latest.json"
       ],
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQ2MDgxRjhGMjFCOEQzODEKUldTQjA3Z2hqeDhJMXNuUFRsZW9UdDZyTE9hb0daREtKYS9XT3ZKS3B5dUM1dVRJUUlzcnlqYVcK"
     }

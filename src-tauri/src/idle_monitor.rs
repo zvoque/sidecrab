@@ -8,7 +8,7 @@ const POLL: Duration = Duration::from_secs(2);
 const DEFAULT_THRESHOLD_SECS: f64 = 60.0;
 
 pub fn threshold_secs() -> f64 {
-    std::env::var("CLAWD_PET_IDLE_SECS")
+    std::env::var("SIDECRAB_IDLE_SECS")
         .ok()
         .and_then(|v| v.parse().ok())
         .unwrap_or(DEFAULT_THRESHOLD_SECS)
@@ -34,7 +34,7 @@ fn hid_idle_secs() -> Option<f64> {
 
 pub fn spawn(app: AppHandle) {
     std::thread::spawn(move || {
-        // Override for testing: CLAWD_PET_IDLE_SECS=10
+        // Override for testing: SIDECRAB_IDLE_SECS=10
         let threshold = threshold_secs();
         let mut was_idle = false;
         loop {

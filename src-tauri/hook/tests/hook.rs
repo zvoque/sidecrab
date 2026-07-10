@@ -1,15 +1,15 @@
-// Integration tests for the clawd-pet-hook binary: spawn it exactly as Claude Code
-// hooks would (event arg + JSON payload on stdin) against a temp CLAWD_PET_HOME.
+// Integration tests for the sidecrab-hook binary: spawn it exactly as Claude Code
+// hooks would (event arg + JSON payload on stdin) against a temp SIDECRAB_HOME.
 use std::io::Write;
 use std::path::Path;
 use std::process::{Command, Stdio};
 
-const BIN: &str = env!("CARGO_BIN_EXE_clawd-pet-hook");
+const BIN: &str = env!("CARGO_BIN_EXE_sidecrab-hook");
 
 fn run_hook(home: &Path, event: &str, payload: &str, envs: &[(&str, &str)]) {
     let mut cmd = Command::new(BIN);
     cmd.arg(event)
-        .env("CLAWD_PET_HOME", home)
+        .env("SIDECRAB_HOME", home)
         .env_remove("TERM_PROGRAM")
         .stdin(Stdio::piped())
         .stdout(Stdio::null())
@@ -34,7 +34,7 @@ fn state(home: &Path) -> serde_json::Value {
 }
 
 fn tmp_home(name: &str) -> std::path::PathBuf {
-    let dir = std::env::temp_dir().join(format!("clawd-pet-test-{name}-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("sidecrab-test-{name}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
     dir

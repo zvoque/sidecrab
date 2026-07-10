@@ -6,12 +6,12 @@
 /// runs attached — used for debugging and by launchd/brew services.
 fn main() {
     let foreground = std::env::args().any(|a| a == "--foreground")
-        || std::env::var_os("CLAWD_PET_CHILD").is_some();
+        || std::env::var_os("SIDECRAB_CHILD").is_some();
     if !foreground {
         if let Ok(exe) = std::env::current_exe() {
             let ok = std::process::Command::new(exe)
                 .arg("--foreground")
-                .env("CLAWD_PET_CHILD", "1")
+                .env("SIDECRAB_CHILD", "1")
                 .stdin(std::process::Stdio::null())
                 .stdout(std::process::Stdio::null())
                 .stderr(std::process::Stdio::null())
@@ -24,5 +24,5 @@ fn main() {
         }
         // Spawn failed — fall through and run attached rather than not at all.
     }
-    clawd_pet_lib::run()
+    sidecrab_lib::run()
 }

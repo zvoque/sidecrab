@@ -1,25 +1,25 @@
 // Standalone hook handler invoked by Claude Code hooks. Reads the hook JSON payload
 // on stdin, maps the event to a pet state, and atomically writes state.json under
-// CLAWD_PET_HOME (default: ~/Library/Application Support/clawd-pet). Also maintains
+// SIDECRAB_HOME (default: ~/Library/Application Support/sidecrab). Also maintains
 // sessions.d/ (one file per live session) and, on session start/end, clears a stale
 // frozen state — but only if that state is owned by the same session id (a warmup
 // burst from another session must never wipe a live turn).
 //
-// Usage: clawd-pet-hook <prompt|pre|post|notify|permreq|stop|start|end>
+// Usage: sidecrab-hook <prompt|pre|post|notify|permreq|stop|start|end>
 
 use serde_json::{json, Value};
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
-// Mirror of clawd_pet_lib::paths::home() — duplicated so this crate stays free
+// Mirror of sidecrab_lib::paths::home() — duplicated so this crate stays free
 // of the tauri dependency tree. Keep the two in sync.
 fn home() -> PathBuf {
-    if let Ok(h) = std::env::var("CLAWD_PET_HOME") {
+    if let Ok(h) = std::env::var("SIDECRAB_HOME") {
         return PathBuf::from(h);
     }
     dirs::config_dir()
         .unwrap_or_else(|| PathBuf::from("/tmp"))
-        .join("clawd-pet")
+        .join("sidecrab")
 }
 
 fn tool_label(tool: &str) -> &'static str {

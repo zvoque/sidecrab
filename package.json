@@ -1,11 +1,11 @@
 {
-  "name": "clawd-pet",
+  "name": "sidecrab",
   "private": true,
   "version": "0.1.0",
   "type": "module",
   "scripts": {
     "tauri": "tauri",
-    "sidecar": "cd src-tauri && cargo build --release -p clawd-pet-hook && cp target/release/clawd-pet-hook binaries/clawd-pet-hook-$(rustc -vV | sed -n 's/host: //p')",
+    "sidecar": "cd src-tauri && cargo build --release -p sidecrab-hook && cp target/release/sidecrab-hook binaries/sidecrab-hook-$(rustc -vV | sed -n 's/host: //p')",
     "dist": "npm run sidecar && tauri build"
   },
   "devDependencies": {

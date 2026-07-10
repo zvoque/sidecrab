@@ -1,4 +1,4 @@
-//! Watches state.json (written by clawd-pet-hook) and forwards each change to the
+//! Watches state.json (written by sidecrab-hook) and forwards each change to the
 //! webview as a `claude-state` event. The pet is a pure consumer of that file.
 
 use notify::{RecursiveMode, Watcher};

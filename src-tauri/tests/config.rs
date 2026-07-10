@@ -1,6 +1,6 @@
 // Config round-trip + defaults. Explicit-path variants are tested (the env-based
-// wrappers just point at CLAWD_PET_HOME/config.json).
-use clawd_pet_lib::config::{load_from, save_to, Config};
+// wrappers just point at SIDECRAB_HOME/config.json).
+use sidecrab_lib::config::{load_from, save_to, Config};
 
 fn tmp(name: &str) -> std::path::PathBuf {
     let dir = std::env::temp_dir().join(format!("clawd-config-{name}-{}", std::process::id()));

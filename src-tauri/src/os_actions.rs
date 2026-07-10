@@ -186,9 +186,9 @@ pub fn hooks_status() -> bool {
     crate::hook_installer::hooks_installed(&crate::paths::claude_settings_path())
 }
 
-/// The bundled clawd-pet-hook sits next to the app executable.
+/// The bundled sidecrab-hook sits next to the app executable.
 fn hook_bin_path(app: &AppHandle) -> Option<String> {
     let exe = tauri::process::current_binary(&app.env()).ok()?;
-    Some(exe.parent()?.join("clawd-pet-hook").to_string_lossy().into_owned())
+    Some(exe.parent()?.join("sidecrab-hook").to_string_lossy().into_owned())
 }
 

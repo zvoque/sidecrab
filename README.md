@@ -1,6 +1,6 @@
-# Clawd Pet
+# Sidecrab
 
-A tiny always-on-top desktop pet for macOS: a hand-drawn 8-bit pixel crab that floats
+**A Claude Code desktop pet** — a tiny always-on-top companion for macOS: a hand-drawn 8-bit pixel crab that floats
 over your screen and reacts to what Claude Code is doing — thinking, running commands,
 editing, awaiting permission, done. Inspired by the Codex pet in the ChatGPT desktop app
 and the crab in [claude-status-bar](https://github.com/m1ckc3s/claude-status-bar).
@@ -26,23 +26,23 @@ for the menu (size S/M/L, wander toggle, hook management, quit).
 ## Requirements
 
 Claude Code (CLI, desktop app, or IDE). Nothing else — no node, no python, no other
-tools. The activity feed comes from a small bundled binary (`clawd-pet-hook`).
+tools. The activity feed comes from a small bundled binary (`sidecrab-hook`).
 
 ## ⚠️ Disclaimer: this app edits `~/.claude/settings.json`
 
-To see Claude Code activity, Clawd Pet registers hook entries in
-`~/.claude/settings.json` that invoke its bundled `clawd-pet-hook` binary. Know this:
+To see Claude Code activity, Sidecrab registers hook entries in
+`~/.claude/settings.json` that invoke its bundled `sidecrab-hook` binary. Know this:
 
 - **Nothing is written without your consent.** On first run you get a dialog; declining
   leaves your settings untouched (the crab just idles).
 - **Your original file is backed up** to `~/.claude/settings.json.bak` before the first
   edit, and the backup is never overwritten afterwards.
 - **Edits are additive.** All existing hooks (other tools included) are preserved; ours
-  are appended alongside and are identifiable by the `clawd-pet-hook` path.
+  are appended alongside and are identifiable by the `sidecrab-hook` path.
 - **Removal is one click:** right-click the crab → *Remove Claude Code hooks* strips
   exactly our entries and nothing else.
 
-The hook writes state to `~/Library/Application Support/clawd-pet/` and does nothing
+The hook writes state to `~/Library/Application Support/sidecrab/` and does nothing
 else: no network, no telemetry, no reading your code.
 
 ## Build & run
@@ -65,7 +65,7 @@ npm run dist          # sidecar + .app + .dmg (+ signed updater artifacts)
    over the old app, and relaunches.
 
 Setup once: add repo secrets `TAURI_SIGNING_PRIVATE_KEY` (contents of
-`~/.tauri/clawd-pet.key`) and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` (empty).
+`~/.tauri/sidecrab.key`) and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` (empty).
 Losing that key breaks updates for existing installs — back it up.
 
 Gatekeeper: without Apple notarization, downloaded builds show macOS's
@@ -74,8 +74,8 @@ For frictionless installs add the `APPLE_*` secrets (Developer ID, $99/yr) —
 the workflow picks them up automatically.
 
 Dev niceties:
-- `CLAWD_PET_IDLE_SECS=10` lowers the wander idle threshold for testing.
-- `CLAWD_PET_HOME=/tmp/x` redirects the state dir (used by tests).
+- `SIDECRAB_IDLE_SECS=10` lowers the wander idle threshold for testing.
+- `SIDECRAB_HOME=/tmp/x` redirects the state dir (used by tests).
 - Opening `src/index.html` from a plain static server runs the renderer with a
   keyboard state cycler (keys 1–6) for animation work.
 
