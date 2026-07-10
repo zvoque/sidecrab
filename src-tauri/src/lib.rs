@@ -75,6 +75,18 @@ fn show_menu(window: WebviewWindow) {
         .build()
         .unwrap();
 
+    let position = SubmenuBuilder::new(app, "Position")
+        .items(&[
+            &MenuItemBuilder::with_id("pos-tl", "Top Left").build(app).unwrap(),
+            &MenuItemBuilder::with_id("pos-tr", "Top Right").build(app).unwrap(),
+            &MenuItemBuilder::with_id("pos-bl", "Bottom Left").build(app).unwrap(),
+            &MenuItemBuilder::with_id("pos-br", "Bottom Right").build(app).unwrap(),
+        ])
+        .separator()
+        .items(&[&MenuItemBuilder::with_id("pos-reset", "Reset Position").build(app).unwrap()])
+        .build()
+        .unwrap();
+
     let wander = CheckMenuItemBuilder::with_id("wander", "Wander when idle")
         .checked(cfg.wander_enabled)
         .build(app)
@@ -88,6 +100,7 @@ fn show_menu(window: WebviewWindow) {
 
     let menu = MenuBuilder::new(app)
         .item(&size)
+        .item(&position)
         .item(&wander)
         .separator()
         .item(&hooks)
@@ -105,6 +118,17 @@ fn on_menu(app: &AppHandle, id: &str) {
         "size-S" | "size-M" | "size-L" => {
             if let Some(w) = win {
                 os_actions::resize_window(w, id.trim_start_matches("size-").to_string());
+            }
+        }
+        // Corner placement becomes the new home; reset = default bottom-right.
+        "pos-tl" | "pos-tr" | "pos-bl" | "pos-br" => {
+            if let Some(w) = win {
+                os_actions::place_corner(&w, id.trim_start_matches("pos-"), true);
+            }
+        }
+        "pos-reset" => {
+            if let Some(w) = win {
+                os_actions::place_corner(&w, "br", true);
             }
         }
         "wander" => {
@@ -204,18 +228,9 @@ pub fn run() {
                     let _ = win.set_position(tauri::PhysicalPosition::new(x, y));
                 }
                 None => {
-                    // Default resting spot: bottom-right corner. Compute the window's
-                    // physical size (outer_size would still report the pre-resize value).
-                    if let Ok(Some(mon)) = win.current_monitor() {
-                        let m = mon.size();
-                        let scale = mon.scale_factor();
-                        let (w, h) = ((lw * scale).round() as i32, (lh * scale).round() as i32);
-                        let margin = (24.0 * scale) as i32;
-                        let _ = win.set_position(tauri::PhysicalPosition::new(
-                            m.width as i32 - w - margin,
-                            m.height as i32 - h - margin,
-                        ));
-                    }
+                    // Default resting spot: bottom-right corner (not persisted — a
+                    // saved home only comes from dragging or the Position menu).
+                    os_actions::place_corner(&win, "br", false);
                 }
             }
 

@@ -19,6 +19,34 @@ pub fn logical_size(size: &str) -> (f64, f64) {
         .unwrap_or((153.0, 144.0))
 }
 
+/// Place the window in a monitor corner ("tl"|"tr"|"bl"|"br"). Computes the
+/// window's physical size from config (outer_size may be stale mid-resize).
+/// When `persist` is set the spot becomes the new home.
+pub fn place_corner(window: &WebviewWindow, corner: &str, persist: bool) {
+    let Ok(Some(mon)) = window.current_monitor() else { return };
+    let m = mon.size();
+    let mp = mon.position();
+    let scale = mon.scale_factor();
+    let (lw, lh) = logical_size(&config::load().size);
+    let (w, h) = ((lw * scale).round() as i32, (lh * scale).round() as i32);
+    let margin = (24.0 * scale) as i32;
+    let x = match corner {
+        "tl" | "bl" => mp.x + margin,
+        _ => mp.x + m.width as i32 - w - margin,
+    };
+    let y = match corner {
+        "tl" | "tr" => mp.y + margin,
+        _ => mp.y + m.height as i32 - h - margin,
+    };
+    let _ = window.set_position(tauri::PhysicalPosition::new(x, y));
+    if persist {
+        let mut c = config::load();
+        c.position = Some((x, y));
+        let _ = config::save(&c);
+    }
+}
+
+
 /// Absolute placement (wander walking / teleport home).
 #[tauri::command]
 pub fn set_window_pos(window: WebviewWindow, x: i32, y: i32) {

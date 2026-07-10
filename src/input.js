@@ -22,14 +22,15 @@ export function attachInput({ renderer, sm, getHost }) {
   let clickTimer = null;
   let dragActive = false;
   let settleTimer = null;
+  let manual = null; // fallback drag state when native startDragging is unavailable
 
   // Native drag emits window `moved` events; once they settle, save the new home.
   appWindow.onMoved(() => {
-    if (!dragActive) return; // wander moves are not the user's home choice
+    if (!dragActive || manual) return; // wander/manual moves handled elsewhere
     clearTimeout(settleTimer);
     settleTimer = setTimeout(() => {
       dragActive = false;
-      invoke("persist_position");
+      invoke("persist_position"); // wherever you leave him = his new home
       invoke("set_drag_lock", { locked: false });
     }, MOVE_SETTLE_MS);
   });
@@ -37,20 +38,43 @@ export function attachInput({ renderer, sm, getHost }) {
   stage.addEventListener("pointerdown", (e) => {
     if (e.button !== 0) return;
     down = { x: e.screenX, y: e.screenY };
+    stage.setPointerCapture(e.pointerId);
   });
 
   stage.addEventListener("pointermove", (e) => {
+    if (manual) {
+      // Fallback drag: position the window ourselves (physical px).
+      const dpr = window.devicePixelRatio || 1;
+      invoke("set_window_pos", {
+        x: Math.round(manual.x + (e.screenX - manual.sx) * dpr),
+        y: Math.round(manual.y + (e.screenY - manual.sy) * dpr),
+      });
+      return;
+    }
     if (!down) return;
     if (Math.hypot(e.screenX - down.x, e.screenY - down.y) < DRAG_PX) return;
-    // Real drag: hand off to the OS. No pointerup will follow, so clear `down`.
+    const start = down;
     down = null;
     dragActive = true;
     invoke("set_drag_lock", { locked: true });
-    appWindow.startDragging();
+    // Native OS drag preferred; if the call is rejected, fall back to manual.
+    appWindow.startDragging().catch(async () => {
+      const g = await invoke("get_geometry");
+      if (g) manual = { x: g.winX, y: g.winY, sx: start.x, sy: start.y };
+    });
   });
 
   stage.addEventListener("pointerup", (e) => {
-    if (e.button !== 0 || !down) return;
+    if (e.button !== 0) return;
+    if (manual) {
+      // Fallback drag ends: this spot is the new home.
+      manual = null;
+      dragActive = false;
+      invoke("persist_position");
+      invoke("set_drag_lock", { locked: false });
+      return;
+    }
+    if (!down) return;
     down = null;
     // Click vs double-click disambiguation.
     if (clickTimer) {
