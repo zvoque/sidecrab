@@ -12,3 +12,10 @@ dist/
 art/reference/
 /src-tauri/binaries/
 node_modules/
+
+# local helper scripts + editor config
+.vscode/
+art/*.py
+art/*.md
+._*
+**/._*

@@ -35,6 +35,10 @@ jobs:
           cargo build --release -p sidecrab-hook --target aarch64-apple-darwin
           cargo build --release -p sidecrab-hook --target x86_64-apple-darwin
           mkdir -p binaries
+          # tauri validates the PER-ARCH triple during each compile leg of a
+          # universal build, then bundles the universal one — provide all three
+          cp target/aarch64-apple-darwin/release/sidecrab-hook binaries/sidecrab-hook-aarch64-apple-darwin
+          cp target/x86_64-apple-darwin/release/sidecrab-hook binaries/sidecrab-hook-x86_64-apple-darwin
           lipo -create \
             target/aarch64-apple-darwin/release/sidecrab-hook \
             target/x86_64-apple-darwin/release/sidecrab-hook \
