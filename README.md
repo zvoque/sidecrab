@@ -35,7 +35,7 @@ sidecrab
 
 | Do this | He does |
 |---|---|
-| **Drag** him anywhere | moves house (remembers the spot) |
+| **Drag** him anywhere | settles there and stays put |
 | **Double-click** | focuses the app running your session |
 | **Right-click** | opens settings |
 
