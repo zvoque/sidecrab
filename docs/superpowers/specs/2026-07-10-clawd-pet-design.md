@@ -20,15 +20,17 @@ around the screen.
 
 **Goals**
 - Floating, always-on-top, transparent, draggable crab window.
-- Animate in real time from Claude Code activity, with **no new hook installation** — reuse
-  the state feed that CSB already writes on this machine.
+- Animate in real time from Claude Code activity.
+- **Fully standalone.** Only requirement is Claude Code (any surface: CLI, desktop app, IDE).
+  We ship our own hook writer and install our own hooks — no dependency on CSB or any other
+  tool, and no external runtime (node/python) needed.
 - Authentic 8-bit look via hand-coded pixel sprites (our own art).
 - Small footprint (Tauri, ~5MB) and negligible idle CPU.
-- Delightful interactions: pet it, reposition it, right-click menu, jump to session.
+- Delightful interactions: pet it, reposition it, right-click menu, activate host app.
 - Optional wander-when-user-idle behavior.
 
 **Non-Goals (v1)**
-- Not a status *bar* — no menu-bar item (CSB already does that).
+- Not a status *bar* — no menu-bar item.
 - No telemetry/network calls.
 - No use of Anthropic's trademarked "Clawd" name or its official (never-released) asset.
   Art is original, Clawd-*inspired*. Product is not named "Clawd".
@@ -37,19 +39,27 @@ around the screen.
 
 ## 3. Architecture
 
-Tauri v2 app. Rust backend owns the OS window and filesystem watching; the frontend is
-vanilla HTML/CSS/JS with a `<canvas>` for the pixel crab. No frontend framework.
+Tauri v2 app plus a tiny bundled hook-writer binary. The Rust backend owns the OS window and
+filesystem watching; the frontend is vanilla HTML/CSS/JS with a `<canvas>` for the pixel crab.
+No frontend framework, no external runtime.
 
 ```
+Claude Code (any surface) ──fires hooks──▶ clawd-pet-hook (bundled binary)
+                                             │ writes state.json + sessions.d/
+                                             ▼
+                         <app-config>/clawd-pet/state.json
+                                             │ (watched)
 ┌─────────────────────────────────────────────────────────┐
 │ Rust backend (src-tauri)                                 │
+│  • on first run: installs our hooks into                 │
+│    ~/.claude/settings.json (idempotent, additive)        │
 │  • creates the floating window (always-on-top,           │
 │    transparent, borderless, all-Spaces, skip-taskbar)    │
-│  • watches ~/.claude/statusbar/state.json (notify crate) │
+│  • watches <app-config>/clawd-pet/state.json (notify)    │
 │    → emits `claude-state` event to the webview           │
-│  • polls macOS HIDIdleTime → emits `user-idle` / `user-active` │
+│  • polls macOS HIDIdleTime → emits `user-idle`/`user-active` │
 │  • commands: set_ignore_cursor_events, resize, reveal    │
-│    transcript, focus terminal, persist/load config       │
+│    transcript, activate host app, persist/load config    │
 └───────────────┬─────────────────────────────────────────┘
                 │ events + IPC
 ┌───────────────▼─────────────────────────────────────────┐
@@ -66,9 +76,11 @@ vanilla HTML/CSS/JS with a `<canvas>` for the pixel crab. No frontend framework.
 
 | Unit | Responsibility | Depends on |
 |---|---|---|
-| `state_watcher` (Rust) | Watch `state.json`, debounce, parse, emit `claude-state` | notify, serde_json, Tauri emit |
+| `clawd-pet-hook` (Rust bin) | Standalone hook handler: read hook JSON on stdin, map event→status, atomically write `state.json`; maintain `sessions.d/`; record `TERM_PROGRAM`/host at SessionStart | serde_json |
+| `hook_installer` (Rust) | On first run, idempotently add our hook entries to `~/.claude/settings.json` (additive, preserves existing incl. CSB); command to remove them | serde_json |
+| `state_watcher` (Rust) | Watch `<app-config>/clawd-pet/state.json`, debounce, parse, emit `claude-state` | notify, serde_json, Tauri emit |
 | `idle_monitor` (Rust) | Poll `HIDIdleTime`, emit `user-idle`/`user-active` on threshold crossing | core-foundation/`ioreg`, Tauri emit |
-| `os_actions` (Rust) | `reveal_transcript`, `focus_terminal`, `set_click_through`, `resize_window` commands | Tauri, `open`/AppleScript |
+| `os_actions` (Rust) | `reveal_transcript`, `activate_host` (Claude.app or terminal via recorded `TERM_PROGRAM`), `set_click_through`, `resize_window` commands | Tauri, `open`/AppleScript |
 | `config` (Rust) | Load/save `{position, size, wanderEnabled}` JSON in app-config dir | tauri app dir, serde |
 | `sprites` (JS) | Frame data (pixel matrices) + canvas renderer | none |
 | `state-machine` (JS) | Map `claude-state` → active animation; handle transitions (e.g. done→idle) | sprites |
@@ -78,9 +90,10 @@ vanilla HTML/CSS/JS with a `<canvas>` for the pixel crab. No frontend framework.
 Each unit is independently testable: sprite frames render deterministically; the state
 machine is a pure map from state string → animation id; config round-trips JSON.
 
-## 4. State feed contract (already exists)
+## 4. State feed — our own, standalone
 
-CSB atomically writes `~/.claude/statusbar/state.json` on every Claude Code hook:
+We own the whole feed. The bundled `clawd-pet-hook` binary is invoked by our hooks and
+atomically writes `<app-config>/clawd-pet/state.json`:
 
 ```json
 {
@@ -90,17 +103,34 @@ CSB atomically writes `~/.claude/statusbar/state.json` on every Claude Code hook
   "project": "doomgeneric",
   "sessionId": "f76126bb-…",
   "transcript": "/Users/…/<sessionId>.jsonl",
+  "host": "iTerm.app | Apple_Terminal | vscode | Claude | …",
   "startedAt": 1782689277,
   "ts": 1782689297
 }
 ```
 
-- The pet is a **pure consumer**. It never writes this file and installs no hooks.
-- `sessions.d/` contains one empty file per live session (count reserved for later badge).
-- `tool` is used to pick the working-animation variant (see §5).
-- `transcript` powers double-click → reveal.
-- Staleness guard: if `state === "done"` or the file's `ts` is older than a small window
-  and no newer event arrives, treat as `idle` after the done-animation completes.
+**Hook → status mapping** (in `clawd-pet-hook`, mirrors the proven CSB logic):
+
+| Hook event | state | label |
+|---|---|---|
+| `UserPromptSubmit` | `thinking` | "Thinking…" |
+| `PreToolUse` | `tool` | tool-specific verb (Bash→"Running command", Edit/Write→"Editing", Read→"Reading", …); unknown→"Using tool" |
+| `PostToolUse` | `thinking` | "Thinking…" |
+| `Notification`/`PermissionRequest` (permission only) | `permission` | "Awaiting permission" |
+| `Stop` | `done` | "Done" (decays to `idle`) |
+| `SessionStart` | — | create `sessions.d/<sid>`, record `host` from `TERM_PROGRAM` (or "Claude" if a desktop session) |
+| `SessionEnd` | — | remove `sessions.d/<sid>` |
+
+- **Hook install:** `hook_installer` adds these entries to `~/.claude/settings.json` on first
+  run — additive and idempotent (keyed on our binary path), preserving any existing hooks
+  (CSB included; both can run side by side). A menu item / uninstall removes them cleanly.
+- **Standalone runtime:** the hook is a compiled binary — no node/python, no version-pinned
+  paths (the failure mode that currently breaks CSB's hook on this machine).
+- `sessions.d/` = one file per live session (count reserved for a later badge).
+- `tool` picks the working-animation variant (§5); `host` powers double-click activation (§6);
+  `transcript` powers double-click reveal.
+- Staleness guard: on `done`, or if `ts` is older than a small window with no newer event,
+  settle to `idle` after the done animation.
 
 ## 5. Animation states
 
@@ -148,9 +178,12 @@ Interactions:
 - **Click (single)** — "pet": play a quick wiggle/bounce reaction, then resume prior state.
 - **Right-click** — native context menu: `Size ▸ S / M / L`, `Wander when idle ✓`,
   `Quit`. (Room to add `Open current session` later.)
-- **Double-click** — `reveal_transcript` (`open -R <transcript>`; reveals the `.jsonl` in
-  Finder) and best-effort `focus_terminal` (AppleScript to activate Terminal.app or iTerm).
-  Cross-terminal session targeting is not guaranteed; reveal is the reliable part.
+- **Double-click** — `activate_host`: bring the session's host app to the front. If the
+  session is a Claude Desktop session (`host = "Claude"`), activate `Claude.app`; otherwise
+  activate the terminal recorded in `host` (`iTerm.app`, `Terminal.app`, VS Code, …) via
+  `open -a`. No exact-session targeting — just focus the app running Claude Code. If `host`
+  is unknown, fall back to activating Claude.app if running, else no-op. (The `.jsonl`
+  transcript path is still recorded and can back a "reveal in Finder" menu item if wanted.)
 
 ## 7. Wander-when-idle (v1, behind toggle)
 
@@ -194,10 +227,13 @@ clawd-pet/
 ├─ src-tauri/
 │  ├─ src/
 │  │  ├─ main.rs            # window build + wiring
+│  │  ├─ hook_installer.rs  # add/remove our hooks in ~/.claude/settings.json
 │  │  ├─ state_watcher.rs
 │  │  ├─ idle_monitor.rs
 │  │  ├─ os_actions.rs
-│  │  └─ config.rs
+│  │  ├─ config.rs
+│  │  └─ bin/
+│  │     └─ clawd_pet_hook.rs  # standalone hook handler (bundled binary)
 │  ├─ tauri.conf.json
 │  └─ Cargo.toml
 ├─ docs/superpowers/specs/  # this spec
@@ -210,10 +246,14 @@ clawd-pet/
   sprites in canvas quickly; Rust gives a proper transparent always-on-top window. Swift
   (CSB's choice) is a fine alternative but slower to build and we don't need native perf for
   a 24×24 sprite.
-- **Reuse CSB's `state.json`:** the exact activity feed already runs on this machine (hooks
-  in `settings.json`). Consuming it means zero setup for the user and one source of truth.
-  Trade-off: hard dependency on CSB being installed and its schema. Mitigation: schema is
-  simple and stable; document the dependency; degrade to `idle` if the file is missing.
+- **Standalone via a bundled hook binary:** we write our own state feed by installing our own
+  Claude Code hooks that call a compiled `clawd-pet-hook` binary. This makes the pet depend on
+  nothing but Claude Code itself, needs no node/python, and avoids the version-pinned-`node`
+  path that currently breaks CSB's hook on this machine. Trade-off: we auto-edit the user's
+  `~/.claude/settings.json`. Mitigation: edits are additive and idempotent (keyed on our
+  binary path), preserve all existing hooks, and are cleanly removable from the menu.
+- **Own state file, not CSB's:** we read our own `<app-config>/clawd-pet/state.json`, so the
+  pet coexists with CSB without coupling to its schema or install state.
 - **Hand-coded pixels:** authentic 8-bit, tiny, frame-consistent, no AI-art cleanup, full
   control. Matches how CSB and `clawd-mochi` did it.
 
@@ -226,10 +266,16 @@ distributed, keep the name and art "inspired-by," not a copy, and avoid the Claw
 
 ## 12. Verification plan
 
+- **Hook install:** run first-launch install against a temp `settings.json` (empty, and one
+  already containing CSB hooks); confirm our entries are added once, existing hooks preserved,
+  and re-running is a no-op; confirm removal deletes only ours.
+- **Hook binary:** pipe sample hook JSON payloads into `clawd-pet-hook` for each event; assert
+  the written `state.json` and `sessions.d/` match the §4 mapping (incl. `host` from
+  `TERM_PROGRAM`).
 - **Sprite/state machine:** headless unit check that each feed state maps to the expected
   animation id and that `done` decays to `idle`.
-- **State feed:** manually write test states into a temp `state.json`, confirm the watcher
-  emits and the crab switches animation within one debounce window.
+- **State feed:** manually write test states into `state.json`, confirm the watcher emits and
+  the crab switches animation within one debounce window.
 - **Window behavior:** launch the app, confirm always-on-top over other windows, transparent
   corners click through, drag persists across restart, resize S/M/L works.
 - **Interactions:** click → pet reaction; right-click → menu items function; double-click →
@@ -239,10 +285,12 @@ distributed, keep the name and art "inspired-by," not a copy, and avoid the Claw
 - Real end-to-end: run a real Claude Code session and watch the crab track
   thinking→tool→done live.
 
-## 13. Open dependencies
+## 13. Dependencies
 
-- Requires CSB installed (writes `~/.claude/statusbar/state.json`). Already present on this
-  machine. If a fresh machine lacks it, document installing CSB, or (future) ship our own
-  minimal hook writer as a fallback.
-- `tauri-cli` not yet installed locally (`cargo install tauri-cli` or `npm create tauri-app`).
-  `cargo`, `node`, `npm` are present.
+- **Only Claude Code** (any surface that reads `~/.claude/settings.json` and fires hooks:
+  CLI, desktop app, IDE). No CSB, no node, no python — the hook handler is a bundled binary.
+- Writes to `~/.claude/settings.json` (additive/idempotent/removable) and to
+  `<app-config>/clawd-pet/`.
+- Build toolchain: `cargo` present; `tauri-cli` not yet installed locally
+  (`cargo install tauri-cli` or `npm create tauri-app`). `node`/`npm` present but only for the
+  Tauri dev tooling, not at runtime.
