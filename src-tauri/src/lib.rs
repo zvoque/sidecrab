@@ -184,6 +184,7 @@ pub fn run() {
             os_actions::hooks_install,
             os_actions::hooks_remove,
             os_actions::hooks_status,
+            idle_monitor::user_is_idle,
         ])
         .setup(|app| {
             let win = app.get_webview_window("main").expect("main window");

@@ -65,7 +65,9 @@ config persistence).
 
 ## IP note
 
-The crab is original pixel art *inspired by* Clawd, Anthropic's Claude Code mascot.
-Anthropic treats the Clawd name and design as its trademark/IP — this project is not
-affiliated, doesn't use the name as a mark, and doesn't ship any Anthropic asset.
-Personal-use project; if you fork and distribute, keep your art and naming your own.
+The crab sprite frames are the official Clawd walk cycle (Anthropic's Claude Code
+mascot), extracted from `Clawd-CrabWalking.gif` by way of
+[claude-status-bar](https://github.com/m1ckc3s/claude-status-bar)'s `CrabFrames.swift`.
+Clawd's name and design are Anthropic's trademark/IP. This is a **personal-use
+project** — do not redistribute the app or the frames. If you fork for distribution,
+replace `src/frames.js` with your own art.

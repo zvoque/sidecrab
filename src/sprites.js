@@ -1,163 +1,89 @@
-// Hand-coded 8-bit crab sprite engine (Clawd-style: boxy flat-top body, wide-set
-// square eyes, square claw nubs, three stubby legs). Every animation frame is the
-// same parametric body in a different pose, produced by crab() — keeps frames
-// consistent and the art in one place.
-//
-// Palette chars: . transparent  o dark accent  B body  s shadow  h highlight  e eye  w bubble
+// Clawd renderer: draws the official 20-frame walk cycle (frames.js) on a canvas.
+// Anim = a sequence of {i: frameIndex, ms, dy?, blink?, bubble?} steps. Facing flips
+// horizontally. No ambient bobbing — idle is still; micro-life comes from the idle
+// scheduler in state-machine.js picking occasional one-shot anims.
+import { FRAME_W, FRAME_H, WALK_PNGS } from "./frames.js";
 
-export const PALETTE = [
-  "transparent", // 0 .
-  "#8a4a38",     // 1 o  dark accent
-  "#c97666",     // 2 B  body (Clawd terracotta)
-  "#b06052",     // 3 s  body shadow
-  "#db8a76",     // 4 h  highlight
-  "#26150f",     // 5 e  eye
-  "#f2e7dc",     // 6 w  speech-bubble "!"
-];
+// Canvas is taller than a frame so the "!" bubble has headroom above the crab.
+export const CANVAS_W = FRAME_W;
+export const CANVAS_H = 48;
+const CRAB_Y = CANVAS_H - FRAME_H; // crab sits at the bottom
 
-const CHARS = { ".": 0, o: 1, B: 2, s: 3, h: 4, e: 5, w: 6 };
-
-const W = 32;
-const H = 32;
-
-function compile(rows) {
-  const grid = [];
-  for (let y = 0; y < H; y++) {
-    const line = rows[y] || "";
-    const row = new Array(W).fill(0);
-    for (let x = 0; x < W; x++) row[x] = CHARS[line[x]] ?? 0;
-    grid.push(row);
-  }
-  return grid;
-}
-
-// ── Parametric crab pose ─────────────────────────────────────────────────────
-// Geometry (rest): cap rows 10-11 cols 10-21 · body rows 12-21 cols 8-23 ·
-// eyes 2×2 at cols 10/20 · nubs 4×4 at cols 4/24 · legs 2-wide at cols 10/15/20.
-function crab(opts = {}) {
-  const {
-    dy = 0,          // whole-crab vertical offset (hop)
-    eyes = "open",   // open | closed | up
-    nubL = "side",   // side | mid | up   (claw nub height)
-    nubR = "side",
-    legs = "stand",  // stand | stepA | stepB (scurry phases)
-    legShift = 0,    // legs x offset while running
-    bubble = false,  // "!" attention bubble
-  } = opts;
-
-  const g = Array.from({ length: H }, () => Array(W).fill("."));
-  const rect = (x, y, w, h, c) => {
-    for (let yy = y + dy; yy < y + h + dy; yy++)
-      for (let xx = x; xx < x + w; xx++)
-        if (yy >= 0 && yy < H && xx >= 0 && xx < W) g[yy][xx] = c;
-  };
-
-  rect(10, 10, 12, 2, "B"); // cap
-  rect(8, 12, 16, 10, "B"); // body
-  rect(8, 21, 2, 1, "s");   // bottom corner shading
-  rect(22, 21, 2, 1, "s");
-
-  if (eyes === "closed") {
-    rect(10, 13, 2, 1, "e");
-    rect(20, 13, 2, 1, "e");
-  } else {
-    const ey = eyes === "up" ? 11 : 12;
-    rect(10, ey, 2, 2, "e");
-    rect(20, ey, 2, 2, "e");
-  }
-
-  const nubY = { side: 14, mid: 13, up: 11 };
-  rect(4, nubY[nubL], 4, 4, "B");
-  rect(24, nubY[nubR], 4, 4, "B");
-
-  [10, 15, 20].forEach((x, i) => {
-    const lifted =
-      legs === "stepA" ? i === 1 : legs === "stepB" ? i !== 1 : false;
-    rect(x + legShift, 22, 2, lifted ? 2 : 3, "B");
-  });
-
-  if (bubble) {
-    rect(25, 3, 2, 5, "w"); // "!" bar
-    rect(25, 9, 2, 2, "w"); // "!" dot
-  }
-
-  return g.map((r) => r.join(""));
-}
-
-const F = (opts, ms) => ({ cells: compile(crab(opts)), ms });
-
+// Animation definitions. Frames 0-3 of the cycle are the neutral stand; the rest
+// walk with the sideways wobble.
 export const SPRITES = {
-  // Idle: breathing bob + occasional blink.
-  rest: { bob: true, frames: [F({}, 3200), F({ eyes: "closed" }, 130)] },
-  // Thinking: eyes up, right claw taps.
-  think: {
-    bob: true,
-    frames: [F({ eyes: "up" }, 420), F({ eyes: "up", nubR: "mid" }, 420)],
+  // Idle: dead still on the neutral pose (micro-life is scheduled separately).
+  rest: { loop: true, steps: [{ i: 0, ms: 60000 }] },
+  // Micro-idle one-shots (scheduler picks one every so often):
+  blink: { loop: false, steps: [{ i: 0, ms: 120, blink: true }, { i: 0, ms: 90 }] },
+  shuffle: {
+    loop: false,
+    steps: [ { i: 5, ms: 260 }, { i: 6, ms: 260 }, { i: 5, ms: 260 }, { i: 0, ms: 120 } ],
   },
-  // Running a command: legs scurry.
-  run: {
-    frames: [
-      F({ legs: "stepA", legShift: -1 }, 140),
-      F({ legs: "stepB", legShift: 1 }, 140),
-    ],
+  stretch: {
+    loop: false,
+    steps: [ { i: 12, ms: 420 }, { i: 13, ms: 420 }, { i: 12, ms: 300 }, { i: 0, ms: 120 } ],
   },
-  // Editing/writing: claws alternate like typing.
-  type: { frames: [F({ nubL: "mid" }, 110), F({ nubR: "mid" }, 110)] },
-  // Awaiting permission: claws up, "!" pulses.
-  alert: {
-    frames: [
-      F({ nubL: "up", nubR: "up", bubble: true }, 500),
-      F({ nubL: "up", nubR: "up" }, 350),
-    ],
+  peek: {
+    loop: false,
+    steps: [ { i: 8, ms: 500 }, { i: 0, ms: 150 }, { i: 16, ms: 500 }, { i: 0, ms: 120 } ],
   },
-  // Done: happy hop.
+  // Full official walk cycle — used for Bash scurry and wander travel.
+  walk: {
+    loop: true,
+    steps: Array.from({ length: 20 }, (_, i) => ({ i, ms: 70 })),
+  },
+  // Thinking: slow pensive shuffle.
+  think: { loop: true, steps: [ { i: 4, ms: 500 }, { i: 5, ms: 500 }, { i: 4, ms: 500 }, { i: 0, ms: 700 } ] },
+  // Editing: quick fidget, like tapping away.
+  type: { loop: true, steps: [ { i: 5, ms: 130 }, { i: 7, ms: 130 } ] },
+  // Awaiting permission: still, urgent "!" bubble pulsing.
+  alert: { loop: true, steps: [ { i: 0, ms: 550, bubble: true }, { i: 0, ms: 350 } ] },
+  // Done: happy double hop.
   celebrate: {
-    frames: [F({ dy: -2, nubL: "up", nubR: "up" }, 170), F({}, 170)],
+    loop: true,
+    steps: [ { i: 0, ms: 130, dy: -4 }, { i: 0, ms: 130 }, { i: 5, ms: 130, dy: -4 }, { i: 5, ms: 130 } ],
   },
 };
 
-// ── Renderer ───────────────────────────────────────────────────────────────
+const BUBBLE = "#f2e7dc";
+
 export class SpriteRenderer {
   constructor(canvas) {
+    canvas.width = CANVAS_W;
+    canvas.height = CANVAS_H;
     this.ctx = canvas.getContext("2d");
     this.ctx.imageSmoothingEnabled = false;
     this.anim = "rest";
-    this.frame = 0;
-    this.facing = 1; // 1 = right, -1 = flipped
+    this.step = 0;
+    this.facing = 1; // 1 = natural, -1 = flipped
     this._acc = 0;
     this._last = 0;
-    this._t = 0;
     this._raf = null;
+    this._onFinish = null; // one-shot completion callback
     this._loop = this._loop.bind(this);
+
+    this.images = WALK_PNGS.map((src) => {
+      const img = new Image();
+      img.src = src;
+      return img;
+    });
+    this._eyeMask = null; // computed lazily once frame 0 loads
+    this._boundsCache = {};
   }
 
-  play(anim) {
-    if (!SPRITES[anim] || this.anim === anim) return;
+  /// Play an animation. For non-looping (micro-idle) anims, onFinish fires once done.
+  play(anim, onFinish = null) {
+    if (!SPRITES[anim]) return;
+    if (this.anim === anim && SPRITES[anim].loop) return;
     this.anim = anim;
-    this.frame = 0;
+    this.step = 0;
     this._acc = 0;
+    this._onFinish = onFinish;
   }
 
   setFacing(dir) {
     this.facing = dir === "left" ? -1 : 1;
-  }
-
-  /// Union bounding box of non-transparent pixels across the current animation's
-  /// frames, as fractions of the canvas — the hit shape for click-through.
-  bounds() {
-    let x0 = W, y0 = H, x1 = 0, y1 = 0;
-    for (const f of SPRITES[this.anim].frames) {
-      for (let y = 0; y < H; y++) {
-        for (let x = 0; x < W; x++) {
-          if (f.cells[y][x] === 0) continue;
-          if (x < x0) x0 = x;
-          if (y < y0) y0 = y;
-          if (x + 1 > x1) x1 = x + 1;
-          if (y + 1 > y1) y1 = y + 1;
-        }
-      }
-    }
-    return { x0: x0 / W, y0: y0 / H, x1: x1 / W, y1: y1 / H };
   }
 
   start() {
@@ -166,38 +92,83 @@ export class SpriteRenderer {
     this._raf = requestAnimationFrame(this._loop);
   }
 
+  /// Dark opaque pixels of frame 0 = the eyes; remember each with the body color
+  /// sampled below it so blink can "close" them.
+  _computeEyeMask() {
+    const img = this.images[0];
+    if (!img.complete || img.naturalWidth === 0) return null;
+    const off = new OffscreenCanvas(FRAME_W, FRAME_H);
+    const ctx = off.getContext("2d");
+    ctx.drawImage(img, 0, 0);
+    const d = ctx.getImageData(0, 0, FRAME_W, FRAME_H).data;
+    const mask = [];
+    for (let y = 0; y < FRAME_H; y++) {
+      for (let x = 0; x < FRAME_W; x++) {
+        const o = (y * FRAME_W + x) * 4;
+        if (d[o + 3] < 200) continue;
+        const lum = 0.299 * d[o] + 0.587 * d[o + 1] + 0.114 * d[o + 2];
+        if (lum > 60) continue; // not an eye pixel
+        // body color from 4px below (safely inside the shell)
+        const s = ((y + 4) * FRAME_W + x) * 4;
+        mask.push({ x, y, fill: `rgb(${d[s]},${d[s + 1]},${d[s + 2]})` });
+      }
+    }
+    return mask;
+  }
+
   _loop(now) {
     const dt = now - this._last;
     this._last = now;
-    this._t += dt;
     const a = SPRITES[this.anim];
     this._acc += dt;
-    if (this._acc >= a.frames[this.frame].ms) {
+    if (this._acc >= a.steps[this.step].ms) {
       this._acc = 0;
-      this.frame = (this.frame + 1) % a.frames.length;
+      if (this.step + 1 >= a.steps.length && !a.loop) {
+        const cb = this._onFinish;
+        this._onFinish = null;
+        this.play("rest");
+        if (cb) cb();
+      } else {
+        this.step = (this.step + 1) % a.steps.length;
+      }
     }
-    this._draw(a);
+    this._draw();
     this._raf = requestAnimationFrame(this._loop);
   }
 
-  _draw(a) {
+  _draw() {
     const ctx = this.ctx;
-    ctx.clearRect(0, 0, W, H);
-    const bob = a.bob ? Math.round(Math.sin(this._t / 900)) : 0;
-    const cells = a.frames[this.frame].cells;
+    const s = SPRITES[this.anim].steps[this.step];
+    const img = this.images[s.i];
+    ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+    if (!img.complete || img.naturalWidth === 0) return;
     ctx.save();
     if (this.facing === -1) {
-      ctx.translate(W, 0);
+      ctx.translate(CANVAS_W, 0);
       ctx.scale(-1, 1);
     }
-    for (let y = 0; y < H; y++) {
-      for (let x = 0; x < W; x++) {
-        const idx = cells[y][x];
-        if (idx === 0) continue;
-        ctx.fillStyle = PALETTE[idx];
-        ctx.fillRect(x, y + bob, 1, 1);
+    const y = CRAB_Y + (s.dy || 0);
+    ctx.drawImage(img, 0, y);
+    if (s.blink) {
+      if (!this._eyeMask) this._eyeMask = this._computeEyeMask();
+      for (const p of this._eyeMask || []) {
+        ctx.fillStyle = p.fill;
+        ctx.fillRect(p.x, p.y + y, 1, 1);
       }
     }
     ctx.restore();
+    if (s.bubble) {
+      // "!" above the crab, upper-right; drawn unflipped so it always reads.
+      ctx.fillStyle = BUBBLE;
+      ctx.fillRect(CANVAS_W - 12, 0, 3, 7);
+      ctx.fillRect(CANVAS_W - 12, 9, 3, 3);
+    }
+  }
+
+  /// Opaque bounding box (fractions of canvas) for the click-through hit rect.
+  bounds() {
+    // The crab body fills most of the frame; a fixed rect over the crab area is
+    // accurate for this boxy sprite and avoids per-frame pixel scans.
+    return { x0: 0.04, y0: CRAB_Y / CANVAS_H, x1: 0.96, y1: 1.0 };
   }
 }

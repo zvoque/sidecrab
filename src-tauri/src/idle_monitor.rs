@@ -7,6 +7,20 @@ use tauri::{AppHandle, Emitter};
 const POLL: Duration = Duration::from_secs(2);
 const DEFAULT_THRESHOLD_SECS: f64 = 60.0;
 
+pub fn threshold_secs() -> f64 {
+    std::env::var("CLAWD_PET_IDLE_SECS")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(DEFAULT_THRESHOLD_SECS)
+}
+
+/// Point-in-time query for the frontend poller (events alone miss the case where
+/// the pet is busy at the transition moment and needs to re-check later).
+#[tauri::command]
+pub fn user_is_idle() -> bool {
+    hid_idle_secs().map(|s| s >= threshold_secs()).unwrap_or(false)
+}
+
 fn hid_idle_secs() -> Option<f64> {
     let out = std::process::Command::new("ioreg")
         .args(["-c", "IOHIDSystem", "-d", "4", "-r", "-k", "HIDIdleTime"])
@@ -21,10 +35,7 @@ fn hid_idle_secs() -> Option<f64> {
 pub fn spawn(app: AppHandle) {
     std::thread::spawn(move || {
         // Override for testing: CLAWD_PET_IDLE_SECS=10
-        let threshold: f64 = std::env::var("CLAWD_PET_IDLE_SECS")
-            .ok()
-            .and_then(|v| v.parse().ok())
-            .unwrap_or(DEFAULT_THRESHOLD_SECS);
+        let threshold = threshold_secs();
         let mut was_idle = false;
         loop {
             std::thread::sleep(POLL);

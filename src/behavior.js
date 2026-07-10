@@ -22,15 +22,18 @@ export function attachBehavior({ renderer, sm }) {
     enabled = !!e.payload;
     if (!enabled) abortToHome(true);
   });
-  listen("user-idle", () => {
-    if (enabled && sm.current() === "idle" && mode === "off") {
-      mode = "wander";
-      drive();
-    }
-  });
   listen("user-active", () => {
     if (mode === "wander") mode = "home";
   });
+  // Poll instead of relying on the one-shot user-idle transition event: the crab is
+  // often mid-animation (Claude busy) at that exact moment and must re-check later.
+  setInterval(async () => {
+    if (!enabled || mode !== "off" || driving || sm.current() !== "idle") return;
+    if (await invoke("user_is_idle")) {
+      mode = "wander";
+      drive();
+    }
+  }, 3000);
 
   /// Claude went busy mid-wander: snap home immediately so the reaction is visible
   /// where the user expects the crab to live.
@@ -45,7 +48,7 @@ export function attachBehavior({ renderer, sm }) {
   }
 
   async function walkTo(tx, ty, speed, live) {
-    renderer.play("run");
+    renderer.play("walk");
     const g = await invoke("get_geometry");
     if (!g) return;
     let { winX: x, winY: y } = g;

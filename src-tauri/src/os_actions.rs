@@ -67,7 +67,24 @@ pub fn resize_window(window: WebviewWindow, size: String) {
     let Some(&(_, px)) = SIZES.iter().find(|(s, _)| *s == size) else {
         return;
     };
+    // Anchor the bottom-right corner: set_size keeps the top-left origin, which
+    // makes smaller sizes drift up-left. Shift the origin by the size delta.
+    let before = (window.outer_position().ok(), window.outer_size().ok());
     let _ = window.set_size(tauri::LogicalSize::new(px, px));
+    if let (Some(pos), Some(old)) = before {
+        if let Ok(new) = window.outer_size() {
+            let (dx, dy) = (
+                old.width as i32 - new.width as i32,
+                old.height as i32 - new.height as i32,
+            );
+            let _ = window.set_position(tauri::PhysicalPosition::new(pos.x + dx, pos.y + dy));
+            let mut c = config::load();
+            c.position = Some((pos.x + dx, pos.y + dy));
+            c.size = size;
+            let _ = config::save(&c);
+            return;
+        }
+    }
     let mut c = config::load();
     c.size = size;
     let _ = config::save(&c);
