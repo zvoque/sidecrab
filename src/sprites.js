@@ -35,16 +35,9 @@ export const SPRITES = {
     loop: true,
     steps: Array.from({ length: 15 }, (_, k) => ({ i: k + 5, ms: 70 })),
   },
-  // Thinking: seated at the laptop, gazing up, thought bubble typing "…".
-  think: {
-    loop: true,
-    steps: [
-      { i: 26, ms: 450, thought: 0 },
-      { i: 26, ms: 450, thought: 1 },
-      { i: 26, ms: 450, thought: 2 },
-      { i: 26, ms: 650, thought: 3 },
-    ],
-  },
+  // Thinking: seated at the laptop, still. The thought bubble is a persistent
+  // renderer entity (setThought) so it survives hover and needs no frames.
+  think: { loop: true, steps: [{ i: 26, ms: 60000 }] },
   // Hovered while seated: stays at the laptop and squints up at you.
   hoverWork: { loop: true, steps: [{ i: 24, ms: 60000, squint: true }] },
   // Working (any tool): side profile at his laptop, both claws hammering keys.
@@ -202,6 +195,12 @@ export class SpriteRenderer {
     if (name === "none") this.hat = null;
   }
 
+  /// Persistent thought bubble (thinking state) — drawn over any pose, phase
+  /// driven by wall-clock so it keeps typing "…" through hover or travel.
+  setThought(on) {
+    this._thought = !!on;
+  }
+
   /// Head anchor for a frame: topmost row containing a horizontal opaque run
   /// ≥12px (the head is wide; raised claws/arms are narrow and get skipped).
   /// Returns {cx, top} in frame coords, cached per frame index.
@@ -265,7 +264,9 @@ export class SpriteRenderer {
       if (x < 0 || y < 0 || x >= FRAME_W || y >= FRAME_H) return false;
       const o = (y * FRAME_W + x) * 4;
       if (d[o + 3] < 150) return false;
-      return 0.299 * d[o] + 0.587 * d[o + 1] + 0.114 * d[o + 2] <= 120;
+      // Near-black only: eyes are pure black after quantization. A looser
+      // threshold caught the (dark gray) laptop and "closed" it on squint.
+      return 0.299 * d[o] + 0.587 * d[o + 1] + 0.114 * d[o + 2] <= 40;
     };
     const mask = [];
     const bottoms = new Map(); // x -> lowest eye y in that column
@@ -336,13 +337,23 @@ export class SpriteRenderer {
     }
     const y = CRAB_Y + (s.dy || 0);
     ctx.drawImage(img, 0, y);
-    if (s.blink || s.squint || s.halfEyes) {
+    // Ambient blink: every few seconds on ANY animation (skipped when the step
+    // already manipulates the eyes) — keeps him alive while working/thinking.
+    let blink = !!s.blink;
+    if (!blink && !s.squint && !s.halfEyes && !s.eyesDx) {
+      this._nextBlink ??= this._t + 2000;
+      if (this._t > this._nextBlink) {
+        if (this._t < this._nextBlink + 140) blink = true;
+        else this._nextBlink = this._t + 3500 + Math.random() * 5500;
+      }
+    }
+    if (blink || s.squint || s.halfEyes) {
       const eyes = this._eyeData(s.i);
       for (const p of eyes?.mask || []) {
         // blink: close fully. squint: keep only the lowest pixel per column
         // (dash-slit). halfEyes: keep the lower half of each column open.
-        if (s.squint && !s.blink && eyes.bottoms.has(`${p.x},${p.y}`)) continue;
-        if (s.halfEyes && !s.blink && !s.squint) {
+        if (s.squint && !blink && eyes.bottoms.has(`${p.x},${p.y}`)) continue;
+        if (s.halfEyes && !blink && !s.squint) {
           const sp = eyes.spans.get(p.x);
           if (sp && p.y > (sp[0] + sp[1]) / 2) continue; // lower half stays open
         }
@@ -382,7 +393,7 @@ export class SpriteRenderer {
     }
     ctx.restore();
     if (s.zzz !== undefined) this._drawZzz(s.zzz);
-    if (s.thought !== undefined) this._drawThought(s.i, s.thought, y);
+    if (this._thought) this._drawThought(s.i, Math.floor(this._t / 450) % 4, y);
     if (s.bubble) {
       // "!" floating above his head (unflipped so it always reads; mirror the
       // anchor when the crab is flipped).

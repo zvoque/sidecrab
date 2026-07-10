@@ -5,7 +5,7 @@
 
 const DONE_MS = 1500; // celebrate length before settling back to rest
 
-const MICRO = ["blink", "blink", "blink", "look", "look", "shuffle", "stretch", "peek", "wave"]; // blink/look-weighted, wave rare
+const MICRO = ["look", "look", "shuffle", "stretch", "peek", "wave"]; // ambient blink handles blinking
 const MICRO_MIN_MS = 3000;
 const MICRO_MAX_MS = 9000;
 const SLEEP_AFTER_MS = 90_000; // continuous idle before nodding off
@@ -72,6 +72,7 @@ export class StateMachine {
     this._sleeping = false; // any real event wakes him
     this.state = next;
     this._lastTool = tool;
+    this.r.setThought?.(next === "thinking"); // bubble persists through hover/travel
     // done still decays to idle even while hover has hijacked the visuals.
     if (next === "done") {
       this._decay = setTimeout(() => this.apply({ state: "idle" }), DONE_MS);
