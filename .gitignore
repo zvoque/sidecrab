@@ -4,3 +4,6 @@ dist/
 .DS_Store
 
 .adr/
+
+# Rust / Tauri
+/src-tauri/target/

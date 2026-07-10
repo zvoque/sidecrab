@@ -1,0 +1,27 @@
+[package]
+name = "clawd-pet"
+version = "0.1.0"
+description = "Desktop pet crab that reacts to Claude Code activity"
+authors = ["zvoque"]
+edition = "2021"
+
+[lib]
+name = "clawd_pet_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+# Bundled hook handler — invoked by Claude Code hooks to write the state file.
+# No external runtime; ships inside the app bundle.
+[[bin]]
+name = "clawd-pet-hook"
+path = "src/bin/clawd_pet_hook.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+notify = "6"
+dirs = "5"
