@@ -14,11 +14,6 @@ Inspired by the Codex pet in the ChatGPT desktop app and
 
 <img src="docs/gifs/hero.gif" width="480" alt="Sidecrab on the desktop">
 
-```bash
-brew install zvoque/tap/sidecrab
-sidecrab
-```
-
 </div>
 
 ## What he does
