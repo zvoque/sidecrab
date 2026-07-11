@@ -56,11 +56,17 @@ a small bundled binary that runs off Claude Code's hooks. Verified with the
 **CLI** and the **Claude desktop app**; any other surface that fires the hooks in
 your `~/.claude/settings.json` works too.
 
-## Setup
+## Install
 
-On first launch he asks before adding a few hooks to `~/.claude/settings.json`
-so he can tell when Claude is working. Your file is backed up first, and you can
-remove them anytime from his right-click menu.
+```bash
+brew install zvoque/tap/sidecrab
+sidecrab
+```
+
+He appears bottom-right and your terminal is free. On first launch he asks before
+adding a few hooks to `~/.claude/settings.json` so he can tell when Claude is
+working. Your file is backed up first, and you can remove them anytime from his
+right-click menu.
 
 Everything else lives in that menu: size, position, hats, wander, and **Launch
 at login**. Update with `brew upgrade sidecrab`.
